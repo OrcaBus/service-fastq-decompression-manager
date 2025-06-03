@@ -1,99 +1,197 @@
-Template Service
-================================================================================
+# Fastq Decompression Manager Microservice
 
-- [Template Service](#template-service)
-  - [Service Description](#service-description)
-    - [Name \& responsibility](#name--responsibility)
-    - [Description](#description)
-    - [API Endpoints](#api-endpoints)
-    - [Consumed Events](#consumed-events)
-    - [Published Events](#published-events)
-    - [(Internal) Data states \& persistence model](#internal-data-states--persistence-model)
-    - [Major Business Rules](#major-business-rules)
-    - [Permissions \& Access Control](#permissions--access-control)
-    - [Change Management](#change-management)
-      - [Versioning strategy](#versioning-strategy)
-      - [Release management](#release-management)
-  - [Infrastructure \& Deployment](#infrastructure--deployment)
-    - [Stateful](#stateful)
-    - [Stateless](#stateless)
-    - [CDK Commands](#cdk-commands)
-    - [Stacks](#stacks)
-  - [Development](#development)
-    - [Project Structure](#project-structure)
-    - [Setup](#setup)
-      - [Requirements](#requirements)
-      - [Install Dependencies](#install-dependencies)
-      - [First Steps](#first-steps)
-    - [Conventions](#conventions)
-    - [Linting \& Formatting](#linting--formatting)
-    - [Testing](#testing)
-  - [Glossary \& References](#glossary--references)
-
+<!-- TOC -->
+* [Fastq Decompression Manager Microservice](#fastq-decompression-manager-microservice)
+  * [Service Description](#service-description)
+    * [API Endpoints](#api-endpoints)
+    * [Consumed Events](#consumed-events)
+      * [Decompression Request events](#decompression-request-events)
+    * [Published Events](#published-events)
+      * [Decompression State Change events](#decompression-state-change-events)
+    * [Step functions summary](#step-functions-summary)
+      * [Handle new job request with task token](#handle-new-job-request-with-task-token)
+      * [Run Decompression Job](#run-decompression-job)
+      * [Handle Terminal Decompression State Change Events](#handle-terminal-decompression-state-change-events)
+      * [Heart Beat Montir](#heart-beat-montir)
+    * [(Internal) Data states & persistence model](#internal-data-states--persistence-model)
+    * [Major Business Rules](#major-business-rules)
+    * [Permissions & Access Control](#permissions--access-control)
+    * [Change Management](#change-management)
+      * [Versioning strategy :construction:](#versioning-strategy-construction)
+      * [Release management :construction:](#release-management-construction)
+  * [Infrastructure & Deployment](#infrastructure--deployment-)
+    * [Stateful](#stateful)
+    * [Stateless](#stateless)
+    * [CDK Commands](#cdk-commands)
+    * [Stacks :construction:](#stacks-construction)
+  * [Development :construction:](#development-construction)
+    * [Project Structure](#project-structure)
+    * [Setup](#setup)
+      * [Requirements](#requirements)
+      * [Install Dependencies](#install-dependencies)
+      * [First Steps](#first-steps)
+    * [Conventions](#conventions)
+    * [Linting & Formatting](#linting--formatting)
+    * [Testing](#testing)
+  * [Glossary & References :construction:](#glossary--references-construction)
+<!-- TOC -->
 
 Service Description
 --------------------------------------------------------------------------------
 
-### Name & responsibility
+The fastq decompression service allows other services to convert ORA compressed fastq files
+to gzipped fastq files for further processing.
 
-### Description
+The service also supports a synchronous task token to allow other services to wait for the decompression
+to complete before proceeding with their own processing. Saving these services from having to implement their own
+stateful logic to track the decompression progress.
+
+![service-overview](./docs/drawio-exports/fastq-unarchiving.drawio.svg)
 
 ### API Endpoints
 
-This service provides a RESTful API following OpenAPI conventions. 
-The Swagger documentation of the production endpoint is available here: 
+This service provides a RESTful API following OpenAPI conventions.
+The Swagger documentation of the production endpoint is available here:
 
+https://fastq-decompression.prod.umccr.org/schema/swagger-ui#
 
 ### Consumed Events
 
-| Name / DetailType | Source         | Schema Link       | Description         |
-|-------------------|----------------|-------------------|---------------------|
-| `SomeServiceStateChange` | `orcabus.someservice` | <schema link> | Announces service state changes |
+
+| Name / DetailType      | Source | Schema Link                                                                                            | Description           |
+|------------------------|--------|--------------------------------------------------------------------------------------------------------|-----------------------|
+| `DecompressionRequest` | `any`  | [./event-schemas/decompression-request.schema.json](./event-schemas/decompression-request.schema.json) | Decompression Request |
+
+#### Decompression Request events
+
+These events should only be used by other step function services.
+In order to run the decompression service without a task token, one can simply just interact with the REST API.
+
+```json5
+{
+  // Event Bus Name is always 'OrcaBusMain'
+  "EventBusName": "OrcaBusMain",
+  "Source": "anysourceyouwant",
+  "DetailType": "DecompressionRequest",
+  "Detail": {
+      "taskToken": "string",
+      "payload": {
+        "fastqSetIdList": [
+          "fqs.1234456"
+        ],
+        "outputUri": "s3://bucket/path/to/output/",
+      }
+  }
+}
+
+```
+
 
 ### Published Events
 
-| Name / DetailType | Source         | Schema Link       | Description         |
-|-------------------|----------------|-------------------|---------------------|
-| `TemplateStateChange` | `orcabus.templatemanager` | <schema link> | Announces Template data state changes |
+| Name / DetailType          | Source                       | Schema Link                                                                                                      | Description         |
+|----------------------------|------------------------------|------------------------------------------------------------------------------------------------------------------|---------------------|
+| `DecompressionStateChange` | `orcabus.fastqdecompression` | [./event-schemas/decompression-state-change.schema.json](./event-schemas/decompression-state-change.schema.json) | Announces service state changes |
 
+
+#### Decompression State Change events
+
+These events are published by the service to announce state changes of the decompression process.
+
+```json5
+{
+  // Event Bus Name is always 'OrcaBusMain'
+  "EventBusName": "OrcaBusMain",
+  "Source": "orcabus.fastqdecompression",
+  "DetailType": "DecompressionStateChange",
+  "Detail": {
+    // The OrcaBus ID of the decompression job
+    "id": "fdj.012345678910",
+    // The fastq set id list for decompression
+    "fastqSetIdList": ["fqs.1234456"],
+    // Status of the decompression job
+    "status": "SUCCEEDED", // or FAILED
+    // Outputs (if the job was successful)
+    "outputs": [
+      {
+        "index": "AAAAA+CCCCC",
+        "lane": "1",
+        "libraryId": "L1234567",
+        "instrumentRunId": "INSTRUMENT_RUN_ID",
+        "read1FileUriDecompressed": "s3://bucket/path/to/fqr_id/.fastq.gz",
+        "read2FileUriDecompressed": "s3://bucket/path/to/output/AAAAA+CCCCC.1.INSTRUMENT_RUN_ID.fastq.gz",
+      }
+    ]
+  }
+}
+```
+
+### Step functions summary
+
+#### Handle new job request with task token
+
+![step-function-diagram](./docs/workflow-studio-exports/initialise-job.svg)
+
+#### Run Decompression Job
+
+![step-function-diagram](./docs/workflow-studio-exports/run-decompression-job.svg)
+
+#### Handle Terminal Decompression State Change Events
+
+![step-function-diagram](./docs/workflow-studio-exports/handle-terminal-decompression-state-change-event.svg)
+
+#### Heart Beat Montir
+
+![step-function-diagram](./docs/workflow-studio-exports/heart-beat-monitor.svg)
 
 ### (Internal) Data states & persistence model
 
+The FastAPI interface is backed by a DynamoDB table that stores the state of each decompression job.
+
+The task-token / job id table is also a DynamoDB table that stores the task token for each job with the job id
+as the primary key.
+
+Both databases use a TTL of 14 days to automatically clean up old records.
+
 ### Major Business Rules
+
+Output uris for decompressed fastq files should be placed into cache buckets with the cache prefix.
+
+The API will fail if the output URI does not end with the cache prefix.
+
+The service also uses ICAv2 credentials to write to cache buckets.
 
 ### Permissions & Access Control
 
+Any service with permissions to publish events to the `OrcaBusMain` event bus can
+trigger the decompression service by publishing a `DecompressionRequest` event.
+
 ### Change Management
 
-#### Versioning strategy
+#### Versioning strategy :construction:
 
-E.g. Manual tagging of git commits following Semantic Versioning (semver) guidelines.
-
-#### Release management
+#### Release management :construction:
 
 The service employs a fully automated CI/CD pipeline that automatically builds and releases all changes to the `main` code branch.
 
 
-Infrastructure & Deployment 
+Infrastructure & Deployment
 --------------------------------------------------------------------------------
 
-Short description with diagrams where appropriate.
-Deployment settings / configuration (e.g. CodePipeline(s) / automated builds).
-
-Infrastructure and deployment are managed via CDK. This template provides two types of CDK entry points: `cdk-stateless` and `cdk-stateful`.
-
+Infrastructure and deployment are managed via CDK.
 
 ### Stateful
 
-- Queues
-- Buckets
-- Database
-- ...
+- API Database
+- Task Token / Job ID Database
 
 ### Stateless
+
 - Lambdas
 - StepFunctions
-
+- Event Rules
+- Event Targets
+- API Gateway / Interfaces
 
 ### CDK Commands
 
@@ -114,7 +212,7 @@ pnpm cdk-stateless <command>
 pnpm cdk-stateful <command>
 ```
 
-### Stacks
+### Stacks :construction:
 
 This CDK project manages multiple stacks. The root stack (the only one that does not include `DeploymentPipeline` in its stack ID) is deployed in the toolchain account and sets up a CodePipeline for cross-environment deployments to `beta`, `gamma`, and `prod`.
 
@@ -134,7 +232,7 @@ OrcaBusStatelessServiceStack/DeploymentPipeline/OrcaBusProd/DeployStack (OrcaBus
 ```
 
 
-Development
+Development :construction:
 --------------------------------------------------------------------------------
 
 ### Project Structure
@@ -211,13 +309,13 @@ make fix
 ### Testing
 
 
-Unit tests are available for most of the business logic. Test code is hosted alongside business in `/tests/` directories.  
+Unit tests are available for most of the business logic. Test code is hosted alongside business in `/tests/` directories.
 
 ```sh
 make test
 ```
 
-Glossary & References
+Glossary & References :construction:
 --------------------------------------------------------------------------------
 
 For general terms and expressions used across OrcaBus services, please see the platform [documentation](https://github.com/OrcaBus/wiki/blob/main/orcabus-platform/README.md#glossary--references).
@@ -228,4 +326,3 @@ Service specific terms:
 |-----------|--------------------------------------------------|
 | Foo | ... |
 | Bar | ... |
-
