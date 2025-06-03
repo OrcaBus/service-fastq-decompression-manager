@@ -1,0 +1,63 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Save vars",
+  "States": {
+    "Save vars": {
+      "Type": "Pass",
+      "Next": "Get Job ID"
+    },
+    "Get Job ID": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Arguments": {
+        "TableName": "MyDynamoDBTable",
+        "Key": {
+          "Column": {
+            "S": "MyEntry"
+          }
+        }
+      },
+      "Next": "If Job in DB"
+    },
+    "If Job in DB": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Get by status"
+        }
+      ],
+      "Default": "Pass"
+    },
+    "Get by status": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Job Succeeded"
+        }
+      ],
+      "Default": "Job failed"
+    },
+    "Job Succeeded": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": "MyData",
+        "TaskToken": "MyData"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "End": true
+    },
+    "Job failed": {
+      "Type": "Task",
+      "Arguments": {
+        "TaskToken": "MyData"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
+      "End": true
+    },
+    "Pass": {
+      "Type": "Pass",
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

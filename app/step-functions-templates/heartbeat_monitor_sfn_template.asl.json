@@ -1,0 +1,111 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Get running jobs",
+  "States": {
+    "Get running jobs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "",
+        "Payload": "{% $states.input %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "More than 0 running jobs"
+    },
+    "More than 0 running jobs": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "For each running job"
+        }
+      ],
+      "Default": "Disable heartbeat scheduler"
+    },
+    "For each running job": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Get current status",
+        "States": {
+          "Get current status": {
+            "Type": "Task",
+            "Arguments": {
+              "ExecutionArn": "MyData"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:sfn:describeExecution",
+            "Next": "Is running"
+          },
+          "Is running": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Next": "Get Task token from job id"
+              }
+            ],
+            "Default": "Pass"
+          },
+          "Get Task token from job id": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Arguments": {
+              "TableName": "MyDynamoDBTable",
+              "Key": {
+                "Column": {
+                  "S": "MyEntry"
+                }
+              }
+            },
+            "Next": "has task token"
+          },
+          "has task token": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Next": "Send heartbeat to task token"
+              }
+            ],
+            "Default": "Pass"
+          },
+          "Send heartbeat to task token": {
+            "Type": "Task",
+            "Arguments": {
+              "TaskToken": "MyData"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskHeartbeat",
+            "End": true
+          },
+          "Pass": {
+            "Type": "Pass",
+            "End": true
+          }
+        }
+      },
+      "End": true
+    },
+    "Disable heartbeat scheduler": {
+      "Type": "Task",
+      "Arguments": {
+        "Name": "MyData"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:eventbridge:disableRule",
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}
