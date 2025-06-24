@@ -4,35 +4,50 @@
   "States": {
     "Save vars": {
       "Type": "Pass",
-      "Next": "Get Job ID"
+      "Next": "Get Job ID",
+      "Assign": {
+        "id": "{% $states.input.id %}",
+        "status": "{% $states.input.status %}",
+        "outputs": "{% $states.input.outputs ? $states.input.outputs : null %}"
+      }
     },
     "Get Job ID": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:getItem",
       "Arguments": {
-        "TableName": "MyDynamoDBTable",
+        "TableName": "${__task_token_table_name__}",
         "Key": {
-          "Column": {
-            "S": "MyEntry"
+          "id": {
+            "S": "{% $id %}"
+          },
+          "id_type": {
+            "S": "${__job_id_type__}"
           }
         }
       },
-      "Next": "If Job in DB"
+      "Next": "If Job in DB",
+      "Assign": {
+        "taskToken": "{% $states.result.Item ? $states.result.Item.taskToken.S : null %}"
+      }
     },
     "If Job in DB": {
       "Type": "Choice",
       "Choices": [
         {
-          "Next": "Get by status"
+          "Next": "Get by status",
+          "Condition": "{% $taskToken ? true : false %}",
+          "Comment": "Job is in DB"
         }
       ],
-      "Default": "Pass"
+      "Default": "Job not in DB"
     },
     "Get by status": {
       "Type": "Choice",
       "Choices": [
         {
-          "Next": "Job Succeeded"
+          "Next": "Job Succeeded",
+          "Condition": "{% $status = 'SUCCEEDED' %}",
+          "Comment": "Job Succeeded"
         }
       ],
       "Default": "Job failed"
@@ -40,21 +55,37 @@
     "Job Succeeded": {
       "Type": "Task",
       "Arguments": {
-        "Output": "MyData",
-        "TaskToken": "MyData"
+        "Output": "{% $outputs %}",
+        "TaskToken": "{% $taskToken %}"
       },
       "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "Next": "Delete Job ID from database"
+    },
+    "Delete Job ID from database": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:deleteItem",
+      "Arguments": {
+        "TableName": "${__task_token_table_name__}",
+        "Key": {
+          "id": {
+            "S": "{% $id %}"
+          },
+          "id_type": {
+            "S": "${__job_id_type__}"
+          }
+        }
+      },
       "End": true
     },
     "Job failed": {
       "Type": "Task",
       "Arguments": {
-        "TaskToken": "MyData"
+        "TaskToken": "{% $taskToken %}"
       },
       "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
-      "End": true
+      "Next": "Delete Job ID from database"
     },
-    "Pass": {
+    "Job not in DB": {
       "Type": "Pass",
       "End": true
     }

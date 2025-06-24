@@ -1,32 +1,85 @@
 {
   "Comment": "A description of my state machine",
-  "StartAt": "Fastq Sync (wait for decompression stats)",
+  "StartAt": "Wait 1 Second",
   "States": {
-    "Fastq Sync (wait for decompression stats)": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
-      "Arguments": {
-        "Entries": [
-          {
-            "Detail": {
-              "Message": "Hello from Step Functions!",
-              "TaskToken": "{% $states.context.Task.Token %}"
-            },
-            "DetailType": "MyDetailType",
-            "EventBusName": "MyEventBusName",
-            "Source": "MySource"
+    "Wait 1 Second": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "Save vars"
+    },
+    "Save vars": {
+      "Type": "Pass",
+      "Next": "Initialise run",
+      "Assign": {
+        "jobId": "{% $states.input.jobId %}",
+        "jobType": "{% $states.input.jobType %}",
+        "fastqIdList": "{% $states.input.fastqIdList ? $states.input.fastqIdList : null %}",
+        "maxReads": "{% $states.input.maxReads ? $states.input.maxReads : -1 %}",
+        "s3JobMetadataBucket": "{% $states.input.s3JobMetadataBucket %}",
+        "s3JobMetadataPrefix": "{% $states.input.s3JobMetadataPrefix %}",
+        "outputUriPrefix": "{% $states.input.outputUriPrefix %}"
+      }
+    },
+    "Initialise run": {
+      "Type": "Parallel",
+      "Next": "Get fastqSetIdList from fastqIdList",
+      "Branches": [
+        {
+          "StartAt": "Update fastq decompression service status",
+          "States": {
+            "Update fastq decompression service status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Output": "{% $states.result.Payload %}",
+              "Arguments": {
+                "FunctionName": "${__update_fastq_decompression_service_status_lambda_function_arn__}",
+                "Payload": {
+                  "jobId": "{% $jobId %}",
+                  "status": "RUNNING",
+                  "stepsExecutionArn": "{% $states.context.Execution.Id %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "End": true
+            }
           }
-        ]
-      },
-      "Next": "Update fastq decompression service status"
+        },
+        {
+          "StartAt": "Enable heartbeat monitor",
+          "States": {
+            "Enable heartbeat monitor": {
+              "Type": "Task",
+              "Arguments": {
+                "Name": "${__heartbeat_scheduler_rule_name__}"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:eventbridge:enableRule",
+              "End": true
+            }
+          }
+        }
+      ]
     },
-    "Update fastq decompression service status": {
+    "Get fastqSetIdList from fastqIdList": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "Output": "{% $states.result.Payload %}",
       "Arguments": {
-        "FunctionName": "",
-        "Payload": "{% $states.input %}"
+        "FunctionName": "${__get_fastq_set_id_list_from_fastq_id_list_lambda_function_arn__}",
+        "Payload": {
+          "fastqIdList": "{% $fastqIdList %}"
+        }
       },
       "Retry": [
         {
@@ -42,30 +95,58 @@
           "JitterStrategy": "FULL"
         }
       ],
-      "Next": "Get s3 uris for each fastq pair"
+      "Next": "Job Type is Decompression",
+      "Output": {},
+      "Assign": {
+        "fastqSetIdList": "{% $states.result.Payload.fastqSetIdList %}"
+      }
     },
-    "Get s3 uris for each fastq pair": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Output": "{% $states.result.Payload %}",
-      "Arguments": {
-        "FunctionName": "",
-        "Payload": "{% $states.input %}"
-      },
-      "Retry": [
+    "Job Type is Decompression": {
+      "Type": "Choice",
+      "Choices": [
         {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2,
-          "JitterStrategy": "FULL"
+          "Next": "For Fastq Set ID",
+          "Condition": "{% $jobType = 'ORA_DECOMPRESSION' ? true : false %}",
+          "Comment": "Is Decompression Job Type"
         }
       ],
+      "Default": "For each fastq pair"
+    },
+    "For Fastq Set ID": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Fastq Sync (wait for decompression stats)",
+        "States": {
+          "Fastq Sync (wait for decompression stats)": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+            "Arguments": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "taskToken": "{% $states.context.Task.Token %}",
+                    "fastqSetId": "{% $states.input.fastqSetId %}",
+                    "requirements": {
+                      "hasFileCompressionInformation": true
+                    }
+                  },
+                  "DetailType": "${__fastq_sync_detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__stack_source__}"
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "Items": "{% $fastqSetIdList %}",
+      "ItemSelector": {
+        "fastqSetId": "{% $states.context.Map.Item.Value %}"
+      },
       "Next": "For each fastq pair"
     },
     "For each fastq pair": {
@@ -74,8 +155,48 @@
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Decompress fastqs",
+        "StartAt": "Save map vars",
         "States": {
+          "Save map vars": {
+            "Type": "Pass",
+            "Next": "Get Fastq Metadata Dict",
+            "Assign": {
+              "fastqIdListIter": "{% $states.input.fastqIdListIter %}"
+            }
+          },
+          "Get Fastq Metadata Dict": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+              "FunctionName": "${__get_fastq_list_row_object_lambda_function_arn__}",
+              "Payload": {
+                "fastqId": "{% $fastqIdListIter %}",
+                "outputUriPrefix": "{% $outputUriPrefix %}",
+                "metadataBucket": "{% $s3JobMetadataBucket %}",
+                "metadataPathPrefix": "{% $s3JobMetadataPrefix %}",
+                "maxReads": "{% $maxReads %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Decompress fastqs",
+            "Assign": {
+              "fastqObjDict": "{% $states.result.Payload.fastqObjDict %}"
+            },
+            "Output": {}
+          },
           "Decompress fastqs": {
             "Type": "Parallel",
             "Branches": [
@@ -84,11 +205,54 @@
                 "States": {
                   "Decompress R1": {
                     "Type": "Task",
-                    "Resource": "arn:aws:states:::ecs:runTask",
+                    "Resource": "arn:aws:states:::ecs:runTask.sync",
                     "Arguments": {
                       "LaunchType": "FARGATE",
-                      "Cluster": "arn:aws:ecs:REGION:ACCOUNT_ID:cluster/MyECSCluster",
-                      "TaskDefinition": "arn:aws:ecs:REGION:ACCOUNT_ID:task-definition/MyTaskDefinition:1"
+                      "Cluster": "${__cluster__}",
+                      "TaskDefinition": "${__task_definition__}",
+                      "NetworkConfiguration": {
+                        "AwsvpcConfiguration": {
+                          "Subnets": "{% $split('${__subnets__}', ',') %}",
+                          "SecurityGroups": "{% [ '${__security_group__}' ] %}"
+                        }
+                      },
+                      "Overrides": {
+                        "ContainerOverrides": [
+                          {
+                            "Name": "${__container_name__}",
+                            "Environment": [
+                              {
+                                "Name": "INPUT_ORA_URI",
+                                "Value": "{% $fastqObjDict.r1OraFileUriSrc %}"
+                              },
+                              {
+                                "Name": "ORA_INGEST_ID",
+                                "Value": "{% $fastqObjDict.r1OraIngestId %}"
+                              },
+                              {
+                                "Name": "GZIP_COMPRESSION_SIZE_IN_BYTES",
+                                "Value": "{% $string($fastqObjDict.r1GzipFileSizeInBytes) %}"
+                              },
+                              {
+                                "Name": "OUTPUT_GZIP_URI",
+                                "Value": "{% $fastqObjDict.r1GzipFileUriDest %}"
+                              },
+                              {
+                                "Name": "OUTPUT_METADATA_URI",
+                                "Value": "{% $fastqObjDict.r1OutputMetadataUri  %}"
+                              },
+                              {
+                                "Name": "MAX_READS",
+                                "Value": "{% $string($maxReads) %}"
+                              },
+                              {
+                                "Name": "JOB_TYPE",
+                                "Value": "{% $jobType %}"
+                              }
+                            ]
+                          }
+                        ]
+                      }
                     },
                     "End": true
                   }
@@ -101,18 +265,63 @@
                     "Type": "Choice",
                     "Choices": [
                       {
-                        "Next": "Decompress R2"
+                        "Next": "Decompress R2",
+                        "Condition": "{% $fastqObjDict.r2OraFileUriSrc ? true : false %}",
+                        "Comment": "R2 exists"
                       }
                     ],
                     "Default": "Pass"
                   },
                   "Decompress R2": {
                     "Type": "Task",
-                    "Resource": "arn:aws:states:::ecs:runTask",
+                    "Resource": "arn:aws:states:::ecs:runTask.sync",
                     "Arguments": {
                       "LaunchType": "FARGATE",
-                      "Cluster": "arn:aws:ecs:REGION:ACCOUNT_ID:cluster/MyECSCluster",
-                      "TaskDefinition": "arn:aws:ecs:REGION:ACCOUNT_ID:task-definition/MyTaskDefinition:1"
+                      "Cluster": "${__cluster__}",
+                      "TaskDefinition": "${__task_definition__}",
+                      "NetworkConfiguration": {
+                        "AwsvpcConfiguration": {
+                          "Subnets": "{% $split('${__subnets__}', ',') %}",
+                          "SecurityGroups": "{% [ '${__security_group__}' ] %}"
+                        }
+                      },
+                      "Overrides": {
+                        "ContainerOverrides": [
+                          {
+                            "Name": "${__container_name__}",
+                            "Environment": [
+                              {
+                                "Name": "INPUT_ORA_URI",
+                                "Value": "{% $fastqObjDict.r2OraFileUriSrc %}"
+                              },
+                              {
+                                "Name": "ORA_INGEST_ID",
+                                "Value": "{% $fastqObjDict.r2OraIngestId %}"
+                              },
+                              {
+                                "Name": "GZIP_COMPRESSION_SIZE_IN_BYTES",
+                                "Value": "{% $string($fastqObjDict.r2GzipFileSizeInBytes) %}"
+                              },
+                              {
+                                "Name": "OUTPUT_GZIP_URI",
+                                "Value": "{% $fastqObjDict.r2GzipFileUriDest %}"
+                              },
+                              {
+                                "Name": "OUTPUT_METADATA_URI",
+                                "Value": "{% $fastqObjDict.r2OutputMetadataUri  %}"
+                              },
+                              {
+                                "Name": "MAX_READS",
+                                "Value": "{% $string($maxReads) %}"
+                              },
+                              {
+                                "Name": "JOB_TYPE",
+                                "Value": "{% $jobType %}"
+                              }
+                            ]
+                          }
+                        ]
+                      }
                     },
                     "End": true
                   },
@@ -123,10 +332,122 @@
                 }
               }
             ],
-            "End": true
+            "Next": "Get metadata contents"
+          },
+          "Get metadata contents": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "Get R1 Object",
+                "States": {
+                  "Get R1 Object": {
+                    "Type": "Task",
+                    "Arguments": {
+                      "Bucket": "{% $s3JobMetadataBucket %}",
+                      "Key": "{% $fastqObjDict.r1OutputMetadataPath %}"
+                    },
+                    "Resource": "arn:aws:states:::aws-sdk:s3:getObject",
+                    "End": true,
+                    "Output": {
+                      "data": "{% $parse($states.result.Body) %}"
+                    }
+                  }
+                }
+              },
+              {
+                "StartAt": "if has r2 (get data)",
+                "States": {
+                  "if has r2 (get data)": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Next": "Get R2 Object",
+                        "Condition": "{% $fastqObjDict.r2OraFileUriSrc ? true : false %}",
+                        "Comment": "R2 file exists"
+                      }
+                    ],
+                    "Default": "Pass (2)"
+                  },
+                  "Get R2 Object": {
+                    "Type": "Task",
+                    "Arguments": {
+                      "Bucket": "{% $s3JobMetadataBucket %}",
+                      "Key": "{% $fastqObjDict.r2OutputMetadataPath %}"
+                    },
+                    "Resource": "arn:aws:states:::aws-sdk:s3:getObject",
+                    "End": true,
+                    "Output": {
+                      "data": "{% $parse($states.result.Body) %}"
+                    }
+                  },
+                  "Pass (2)": {
+                    "Type": "Pass",
+                    "End": true,
+                    "Output": {}
+                  }
+                }
+              }
+            ],
+            "Output": {
+              "metadataJson": "{% /* https://try.jsonata.org/WzjRyuQxT */\n/* Gather data attribute from each attribute in the result map */\n$states.result.(data) %}"
+            },
+            "Next": "Set map iter output dict"
+          },
+          "Set map iter output dict": {
+            "Type": "Pass",
+            "End": true,
+            "Output": {
+              "metadataJson": "{% $states.input.metadataJson %}"
+            }
           }
         }
       },
+      "Items": "{% $fastqIdList %}",
+      "ItemSelector": {
+        "fastqIdListIter": "{% $states.context.Map.Item.Value %}"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Assign": {
+            "status": "FAILED"
+          },
+          "Next": "Update fastq decompression status (complete)"
+        }
+      ],
+      "Next": "Update fastq decompression status (complete)",
+      "Assign": {
+        "metadataJsonFastqPairDictsList": "{% $states.result.(metadataJson) %}"
+      }
+    },
+    "Update fastq decompression status (complete)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_fastq_decompression_service_status_lambda_function_arn__}",
+        "Payload": {
+          "jobId": "{% $jobId %}",
+          "jobType": "{% $jobType %}",
+          "metadataJsonFastqPairDictsList": "{% $metadataJsonFastqPairDictsList ? $metadataJsonFastqPairDictsList : null %}",
+          "status": "{% $status ? $status : 'SUCCEEDED' %}",
+          "fastqIdList": "{% $fastqIdList %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
       "End": true
     }
   },

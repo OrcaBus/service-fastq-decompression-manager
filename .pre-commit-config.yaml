@@ -4,7 +4,7 @@ repos:
     rev: v5.0.0
     hooks:
       - id: check-added-large-files
-        exclude: ^(pnpm-lock.yaml)
+        exclude: (^pnpm-lock.yaml)|(orad.tar.gz$)
       - id: check-yaml
       - id: detect-aws-credentials
         args: [ --allow-missing-credentials ]
