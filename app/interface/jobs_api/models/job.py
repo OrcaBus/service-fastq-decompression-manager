@@ -95,8 +95,12 @@ class JobResponse(JobWithId):
     # Set the model_dump method response
     def model_dump(self, **kwargs) -> Self:
         # Remove 'outputs' from the exclude list if it is not set
+        kwargs = deepcopy(kwargs)
         if 'exclude_none' not in kwargs:
             kwargs['exclude_none'] = True
+
+        if 'by_alias' not in kwargs:
+            kwargs['by_alias'] = True
 
         return super().model_dump(**kwargs)
 
@@ -108,10 +112,6 @@ class JobCreate(JobBase):
     )
 
     def model_dump(self, **kwargs) -> 'JobResponse':
-        print(
-            JobResponse(**super().model_dump(**kwargs)).
-            model_dump()
-        )
         return (
             JobResponse(**super().model_dump(**kwargs)).
             model_dump()
