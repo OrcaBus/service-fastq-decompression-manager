@@ -64,7 +64,25 @@
             "Next": "Is running",
             "Assign": {
               "stepsExecutionStatus": "{% $states.result.Status %}"
-            }
+            },
+            "Catch": [
+              {
+                "ErrorEquals": ["Sfn.SfnException"],
+                "Comment": "Missing SFN",
+                "Next": "Update API",
+                "Assign": {
+                  "status": "FAILED"
+                }
+              }
+            ],
+            "Retry": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "BackoffRate": 2,
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3
+              }
+            ]
           },
           "Is running": {
             "Type": "Choice",
