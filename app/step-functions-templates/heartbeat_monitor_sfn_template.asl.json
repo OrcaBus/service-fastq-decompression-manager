@@ -5,9 +5,8 @@
     "Get running jobs": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "Output": "{% $states.result.Payload %}",
       "Arguments": {
-        "FunctionName": "",
+        "FunctionName": "${__list_running_jobs_lambda_function_arn__}",
         "Payload": "{% $states.input %}"
       },
       "Retry": [
@@ -24,13 +23,18 @@
           "JitterStrategy": "FULL"
         }
       ],
-      "Next": "More than 0 running jobs"
+      "Next": "More than 0 running jobs",
+      "Output": {
+        "runningJobsList": "{% $states.result.Payload.runningJobsList %}"
+      }
     },
     "More than 0 running jobs": {
       "Type": "Choice",
       "Choices": [
         {
-          "Next": "For each running job"
+          "Next": "For each running job",
+          "Condition": "{% $count($states.input.runningJobsList) > 0 %}",
+          "Comment": "At least one running job"
         }
       ],
       "Default": "Disable heartbeat scheduler"
@@ -41,43 +45,106 @@
         "ProcessorConfig": {
           "Mode": "INLINE"
         },
-        "StartAt": "Get current status",
+        "StartAt": "Set map vars",
         "States": {
+          "Set map vars": {
+            "Type": "Pass",
+            "Next": "Get current status",
+            "Assign": {
+              "stepsExecutionArn": "{% $states.input.stepsExecutionArn %}",
+              "jobId": "{% $states.input.jobId %}"
+            }
+          },
           "Get current status": {
             "Type": "Task",
             "Arguments": {
-              "ExecutionArn": "MyData"
+              "ExecutionArn": "{% $stepsExecutionArn %}"
             },
             "Resource": "arn:aws:states:::aws-sdk:sfn:describeExecution",
-            "Next": "Is running"
+            "Next": "Is running",
+            "Assign": {
+              "stepsExecutionStatus": "{% $states.result.Status %}"
+            },
+            "Catch": [
+              {
+                "ErrorEquals": ["Sfn.SfnException", "Sfn.ExecutionDoesNotExistException"],
+                "Comment": "Missing SFN",
+                "Next": "Update API"
+              }
+            ],
+            "Retry": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "BackoffRate": 2,
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3
+              }
+            ]
           },
           "Is running": {
             "Type": "Choice",
             "Choices": [
               {
-                "Next": "Get Task token from job id"
+                "Next": "Get Task token from job id",
+                "Condition": "{% $stepsExecutionStatus in ['RUNNING', 'SUCCEEDED'] %}"
               }
             ],
-            "Default": "Pass"
+            "Default": "Update API"
+          },
+          "Update API": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Output": {},
+            "Arguments": {
+              "FunctionName": "${__update_fastq_decompression_service_status_lambda_function_arn__}",
+              "Payload": {
+                "jobId": "{% $jobId %}",
+                "status": "{% $states.input.Status ? $states.input.Status : 'FAILED' %}",
+                "stepsExecutionArn": "{% $stepsExecutionArn %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Pass"
           },
           "Get Task token from job id": {
             "Type": "Task",
             "Resource": "arn:aws:states:::dynamodb:getItem",
             "Arguments": {
-              "TableName": "MyDynamoDBTable",
+              "TableName": "${__task_token_table_name__}",
               "Key": {
-                "Column": {
-                  "S": "MyEntry"
+                "id": {
+                  "S": "{% $jobId %}"
+                },
+                "id_type": {
+                  "S": "${__job_id_type__}"
                 }
               }
             },
-            "Next": "has task token"
+            "Next": "has task token",
+            "Assign": {
+              "taskToken": "{% $states.result.Item ? $states.result.Item.taskToken.S : null %}"
+            }
           },
           "has task token": {
             "Type": "Choice",
             "Choices": [
               {
-                "Next": "Send heartbeat to task token"
+                "Next": "Send heartbeat to task token",
+                "Condition": "{% $taskToken ? true : false %}",
+                "Comment": "Has Task Token"
               }
             ],
             "Default": "Pass"
@@ -85,7 +152,7 @@
           "Send heartbeat to task token": {
             "Type": "Task",
             "Arguments": {
-              "TaskToken": "MyData"
+              "TaskToken": "{% $taskToken %}"
             },
             "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskHeartbeat",
             "End": true
@@ -96,12 +163,17 @@
           }
         }
       },
-      "End": true
+      "End": true,
+      "Items": "{% $states.input.runningJobsList %}",
+      "ItemSelector": {
+        "stepsExecutionArn": "{% $states.context.Map.Item.Value.stepsExecutionArn %}",
+        "jobId": "{% $states.context.Map.Item.Value.id %}"
+      }
     },
     "Disable heartbeat scheduler": {
       "Type": "Task",
       "Arguments": {
-        "Name": "MyData"
+        "Name": "${__heartbeat_scheduler_rule_name__}"
       },
       "Resource": "arn:aws:states:::aws-sdk:eventbridge:disableRule",
       "End": true

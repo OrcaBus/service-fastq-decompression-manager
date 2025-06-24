@@ -6,6 +6,8 @@
     * [API Endpoints](#api-endpoints)
     * [Consumed Events](#consumed-events)
       * [Decompression Request events](#decompression-request-events)
+      * [GZIP FileSize Request events](#gzip-filesize-request-events)
+      * [Raw MD5Sum Calculation Request events](#raw-md5sum-calculation-request-events)
     * [Published Events](#published-events)
       * [Decompression State Change events](#decompression-state-change-events)
     * [Step functions summary](#step-functions-summary)
@@ -19,7 +21,7 @@
     * [Change Management](#change-management)
       * [Versioning strategy :construction:](#versioning-strategy-construction)
       * [Release management :construction:](#release-management-construction)
-  * [Infrastructure & Deployment](#infrastructure--deployment-)
+  * [Infrastructure & Deployment](#infrastructure--deployment)
     * [Stateful](#stateful)
     * [Stateless](#stateless)
     * [CDK Commands](#cdk-commands)
@@ -60,30 +62,145 @@ https://fastq-decompression.prod.umccr.org/schema/swagger-ui#
 
 | Name / DetailType      | Source | Schema Link                                                                                            | Description           |
 |------------------------|--------|--------------------------------------------------------------------------------------------------------|-----------------------|
-| `DecompressionRequest` | `any`  | [./event-schemas/decompression-request.schema.json](./event-schemas/decompression-request.schema.json) | Decompression Request |
+| `OraDecompressionRequestSync` | `any`  | [./event-schemas/decompression-request.schema.json](./event-schemas/decompression-request.schema.json) | Decompression Request |
+
 
 #### Decompression Request events
 
 These events should only be used by other step function services.
 In order to run the decompression service without a task token, one can simply just interact with the REST API.
+Or generate the event manually and publish it to the `OrcaBusMain` event bus, they will however,
+need to change the DetailType from `OraDecompressionRequestSync` to `OraDecompressionRequest`.
 
 ```json5
 {
   // Event Bus Name is always 'OrcaBusMain'
   "EventBusName": "OrcaBusMain",
   "Source": "anysourceyouwant",
-  "DetailType": "DecompressionRequest",
+  "DetailType": "OraDecompressionRequestSync",
   "Detail": {
+      // The task token is used to wait for the decompression job to complete
       "taskToken": "string",
+      // The parameters received by the service
       "payload": {
-        "fastqSetIdList": [
-          "fqs.1234456"
+        "fastqIdList": [
+          "fqr.1234456"
         ],
-        "outputUri": "s3://bucket/path/to/output/",
+        // The S3 Output URI prefix where the decompressed fastq files will be stored
+        // The decompression service will need write permissions to this bucket
+        // Either through ICAv2 credentials or through the task role
+        // If not specified, the service will use its own default output URI prefix
+        "outputUriPrefix": "s3://bucket/path/to/output/prefix/",
+        // The maximum number of reads to decompress for each file
+        // This is useful for services such as the 'qc' service or 'ntsm' services
+        // That only need a limited amount of reads to perform their analysis
+        "maxReads": 1000000
       }
   }
 }
+```
 
+The output to the task token will be as follows:
+
+```json5
+{
+  "Output": {
+    "decompressedFileList": [
+      {
+        "fastqId": "fqs.1234456",
+        "decompressedFileUriByOraFileIngestIdList": [{
+          "ingestId": "INGEST_ID",
+          "gzipFileUri": "s3://bucket/path/to/output/prefix/<INSTRUMENT_RUN_ID>/Samples/Lane_<lane_number>/<Library_ID>/<Library_ID>_S1_L00<lane_number>_R1_001.fastq.gz"
+        }]
+      }
+    ]
+  }
+}
+```
+
+#### GZIP FileSize Request events
+
+These events should only be used by other step function services.
+In order to run the Gzip FileSize without a task token, one can simply just interact with the REST API.
+This will be used by the fastq manager whenever a request to run to calculate the gzip file size is made.
+A user may also specify a fastqIdList instead of a fastqIdList,
+
+```json5
+{
+  // Event Bus Name is always 'OrcaBusMain'
+  "EventBusName": "OrcaBusMain",
+  "Source": "anysourceyouwant",
+  "DetailType": "OraToGzipFileSizeCalculationRequestSync",
+  "Detail": {
+      "taskToken": "string",
+      "payload": {
+        "fastqIdList": [
+          "fqr.1234456",
+        ]
+      }
+  }
+}
+```
+
+The output to the task token will be as follows:
+
+```json5
+{
+  "Output": {
+    "gzipFileSizeList": [
+      {
+        "fastqId": "fqr.1234456",
+        "gzipFileSizesByOraFileIngestIdList": [{
+          "ingestId": "INGEST_ID",
+          "gzipFileSize": 12345678 // Size in bytes
+        }]
+      }
+    ]
+  }
+}
+```
+
+#### Raw MD5Sum Calculation Request events
+
+This service can also be used to calculate the raw MD5Sum of a fastq file.
+
+This is useful for services that need to verify the integrity of the fastq files after decompression.
+
+```json5
+{
+  // Event Bus Name is always 'OrcaBusMain'
+  "EventBusName": "OrcaBusMain",
+  "Source": "anysourceyouwant",
+  "DetailType": "OraToRawMd5SumCalculationRequestSync",
+  "Detail": {
+      // The task token is used to wait for the raw MD5Sum job to complete
+      "taskToken": "string",
+      // The parameters received by the service
+      "payload": {
+        "fastqIdList": [
+          "fqr.1234456"
+        ]
+      }
+  }
+}
+```
+
+When using a task token the output will be as follows:
+
+```json5
+{
+  "Output": {
+    "rawMd5sumList": [
+      {
+        "fastqId": "fqr.1234456",
+        "rawMd5sumByOraFileIngestIdList": [{
+          "ingestId": "INGEST_ID",
+          "rawMd5sum": "0123456789abcdef0123456789abcdef"  // pragma: allowlist secret
+        }]
+      }
+    ]
+  }
+}
 ```
 
 
@@ -107,8 +224,8 @@ These events are published by the service to announce state changes of the decom
   "Detail": {
     // The OrcaBus ID of the decompression job
     "id": "fdj.012345678910",
-    // The fastq set id list for decompression
-    "fastqSetIdList": ["fqs.1234456"],
+    // The fastq id list for decompression
+    "fastqIdList": ["fqr.1234456"],
     // Status of the decompression job
     "status": "SUCCEEDED", // or FAILED
     // Outputs (if the job was successful)

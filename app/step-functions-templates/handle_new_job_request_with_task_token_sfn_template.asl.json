@@ -4,67 +4,66 @@
   "States": {
     "Save vars": {
       "Type": "Pass",
-      "Next": "Launch Job, start hearbeat"
+      "Next": "Launch Job",
+      "Assign": {
+        "taskToken": "{% $states.input.taskToken ? $states.input.taskToken : null %}",
+        "payload": "{% $states.input.payload %}"
+      }
     },
-    "Launch Job, start hearbeat": {
-      "Type": "Parallel",
-      "Branches": [
+    "Launch Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": {
+        "jobId": "{% $states.result.Payload.jobObject.id %}"
+      },
+      "Arguments": {
+        "FunctionName": "${__launch_decompression_job_lambda_function_arn__}",
+        "Payload": {
+          "fastqIdList": "{% $payload.fastqIdList %}",
+          "outputUriPrefix": "{% $payload.outputUriPrefix %}"
+        }
+      },
+      "Retry": [
         {
-          "StartAt": "Launch Job",
-          "States": {
-            "Launch Job": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Output": "{% $states.result.Payload %}",
-              "Arguments": {
-                "FunctionName": "",
-                "Payload": "{% $states.input %}"
-              },
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "Lambda.ServiceException",
-                    "Lambda.AWSLambdaException",
-                    "Lambda.SdkClientException",
-                    "Lambda.TooManyRequestsException"
-                  ],
-                  "IntervalSeconds": 1,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2,
-                  "JitterStrategy": "FULL"
-                }
-              ],
-              "Next": "Save job"
-            },
-            "Save job": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::dynamodb:putItem",
-              "Arguments": {
-                "TableName": "MyDynamoDBTable",
-                "Item": {
-                  "Column": {
-                    "S": "MyEntry"
-                  }
-                }
-              },
-              "End": true
-            }
-          }
-        },
-        {
-          "StartAt": "Enable Heartbeat scheduler",
-          "States": {
-            "Enable Heartbeat scheduler": {
-              "Type": "Task",
-              "Arguments": {
-                "Name": "MyData"
-              },
-              "Resource": "arn:aws:states:::aws-sdk:eventbridge:enableRule",
-              "End": true
-            }
-          }
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
         }
       ],
+      "Next": "Save job"
+    },
+    "Save job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Arguments": {
+        "TableName": "${__task_token_table_name__}",
+        "Item": {
+          "id": {
+            "S": "{% $states.input.jobId %}"
+          },
+          "id_type": {
+            "S": "${__job_id_type__}"
+          },
+          "task_token": {
+            "S": "{% $taskToken %}"
+          }
+        }
+      },
+      "Next": "Enable HeartBeat Scheduler rule"
+    },
+    "Enable HeartBeat Scheduler rule": {
+      "Type": "Task",
+      "Arguments": {
+        "Name": "${__heartbeat_scheduler_rule_name__}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:eventbridge:enableRule",
       "End": true
     }
   },
