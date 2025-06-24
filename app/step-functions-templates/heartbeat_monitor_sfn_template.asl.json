@@ -67,12 +67,9 @@
             },
             "Catch": [
               {
-                "ErrorEquals": ["Sfn.SfnException"],
+                "ErrorEquals": ["Sfn.SfnException", "Sfn.ExecutionDoesNotExistException"],
                 "Comment": "Missing SFN",
-                "Next": "Update API",
-                "Assign": {
-                  "status": "FAILED"
-                }
+                "Next": "Update API"
               }
             ],
             "Retry": [
@@ -102,7 +99,7 @@
               "FunctionName": "${__update_fastq_decompression_service_status_lambda_function_arn__}",
               "Payload": {
                 "jobId": "{% $jobId %}",
-                "status": "{% $states.input.Status %}",
+                "status": "{% $states.input.Status ? $states.input.Status : 'FAILED' %}",
                 "stepsExecutionArn": "{% $stepsExecutionArn %}"
               }
             },

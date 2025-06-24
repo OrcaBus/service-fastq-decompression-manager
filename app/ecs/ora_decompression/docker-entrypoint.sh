@@ -80,14 +80,16 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   	  "$(  \
   	    python3 scripts/get_icav2_download_url.py \
   	    "${INPUT_ORA_URI}"
-  	  )"
+  	  )" || \
+  	true
   ) | \
   (
   	/usr/local/bin/orad \
   	  --raw \
   	  --stdout \
   	  --ora-reference "${ORADATA_PATH}" \
-  	  -
+  	  - || \
+  	true
   ) | \
   (
   	if [[ "${MAX_READS}" -gt 0 ]]; then
