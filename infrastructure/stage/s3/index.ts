@@ -1,20 +1,8 @@
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import {
-  S3_BUCKET_NAME,
-  S3_DEFAULT_DECOMPRESSION_PREFIX,
-  S3_DEFAULT_METADATA_PREFIX,
-} from '../constants';
+import { S3_DEFAULT_DECOMPRESSION_PREFIX, S3_DEFAULT_METADATA_PREFIX } from '../constants';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Duration } from 'aws-cdk-lib';
-
-export function getS3BucketName(): string {
-  return S3_BUCKET_NAME.replace('__ACCOUNT_ID__', cdk.Aws.ACCOUNT_ID).replace(
-    '__REGION__',
-    cdk.Aws.REGION
-  );
-}
 
 function addDecompressionDataLifeCycleRuleToBucket(bucket: Bucket): void {
   bucket.addLifecycleRule({
@@ -43,8 +31,7 @@ function createS3Bucket(scope: Construct, bucketName: string): Bucket {
   });
 }
 
-export function createJobsBucket(scope: Construct): Bucket {
-  const bucketName = getS3BucketName();
+export function createJobsBucket(scope: Construct, bucketName: string): Bucket {
   const s3Bucket = createS3Bucket(scope, bucketName);
 
   // Add lifecycle rules to the bucket

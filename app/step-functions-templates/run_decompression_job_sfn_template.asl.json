@@ -22,7 +22,7 @@
     },
     "Initialise run": {
       "Type": "Parallel",
-      "Next": "Get fastqSetIdList from fastqIdList",
+      "Next": "Job Type needs requirements",
       "Branches": [
         {
           "StartAt": "Update fastq decompression service status",
@@ -72,80 +72,42 @@
         }
       ]
     },
-    "Get fastqSetIdList from fastqIdList": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Arguments": {
-        "FunctionName": "${__get_fastq_set_id_list_from_fastq_id_list_lambda_function_arn__}",
-        "Payload": {
-          "fastqIdList": "{% $fastqIdList %}"
-        }
-      },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 1,
-          "MaxAttempts": 3,
-          "BackoffRate": 2,
-          "JitterStrategy": "FULL"
-        }
-      ],
-      "Next": "Job Type is Decompression",
-      "Output": {},
-      "Assign": {
-        "fastqSetIdList": "{% $states.result.Payload.fastqSetIdList %}"
-      }
-    },
-    "Job Type is Decompression": {
+    "Job Type needs requirements": {
       "Type": "Choice",
       "Choices": [
         {
-          "Next": "For Fastq Set ID",
-          "Condition": "{% $jobType = 'ORA_DECOMPRESSION' ? true : false %}",
-          "Comment": "Is Decompression Job Type"
+          "Comment": "Is Decompression Job Type",
+          "Next": "Fastq Sync (wait for decompression stats)",
+          "Condition": "{% ( \n $jobType = 'ORA_DECOMPRESSION' and\n ( \n   $maxReads = -1 or\n   $maxReads > ${__min_reads_to_require_gzip_stats__}\n )\n) %}"
+        },
+        {
+          "Next": "Needs Read Count",
+          "Condition": "{% $jobType = 'GZIP_FILESIZE_CALCULATION' %}",
+          "Comment": "Is Gzip Filesize Calculation Job"
         }
       ],
       "Default": "For each fastq pair"
     },
-    "For Fastq Set ID": {
-      "Type": "Map",
-      "ItemProcessor": {
-        "ProcessorConfig": {
-          "Mode": "INLINE"
-        },
-        "StartAt": "Fastq Sync (wait for decompression stats)",
-        "States": {
-          "Fastq Sync (wait for decompression stats)": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
-            "Arguments": {
-              "Entries": [
-                {
-                  "Detail": {
-                    "taskToken": "{% $states.context.Task.Token %}",
-                    "fastqSetId": "{% $states.input.fastqSetId %}",
-                    "requirements": {
-                      "hasFileCompressionInformation": true
-                    }
-                  },
-                  "DetailType": "${__fastq_sync_detail_type__}",
-                  "EventBusName": "${__event_bus_name__}",
-                  "Source": "${__stack_source__}"
+    "Fastq Sync (wait for decompression stats)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Arguments": {
+        "Entries": [
+          {
+            "Detail": {
+              "taskToken": "{% $states.context.Task.Token %}",
+              "payload": {
+                "fastqIdList": "{% $fastqIdList %}",
+                "requirements": {
+                  "hasFileCompressionInformation": true
                 }
-              ]
+              }
             },
-            "End": true
+            "DetailType": "${__fastq_sync_detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__stack_source__}"
           }
-        }
-      },
-      "Items": "{% $fastqSetIdList %}",
-      "ItemSelector": {
-        "fastqSetId": "{% $states.context.Map.Item.Value %}"
+        ]
       },
       "Next": "For each fastq pair"
     },
@@ -226,12 +188,16 @@
                                 "Value": "{% $fastqObjDict.r1OraFileUriSrc %}"
                               },
                               {
+                                "Name": "FASTQ_ID",
+                                "Value": "{% $fastqIdListIter %}"
+                              },
+                              {
                                 "Name": "ORA_INGEST_ID",
                                 "Value": "{% $fastqObjDict.r1OraIngestId %}"
                               },
                               {
                                 "Name": "GZIP_COMPRESSION_SIZE_IN_BYTES",
-                                "Value": "{% $string($fastqObjDict.r1GzipFileSizeInBytes) %}"
+                                "Value": "{% $string($fastqObjDict.r1GzipFileSizeInBytes ? $fastqObjDict.r1GzipFileSizeInBytes : -1) %}"
                               },
                               {
                                 "Name": "OUTPUT_GZIP_URI",
@@ -248,6 +214,10 @@
                               {
                                 "Name": "JOB_TYPE",
                                 "Value": "{% $jobType %}"
+                              },
+                              {
+                                "Name": "TOTAL_READ_COUNT",
+                                "Value": "{% $string($fastqObjDict.totalReadCount) %}"
                               }
                             ]
                           }
@@ -265,9 +235,9 @@
                     "Type": "Choice",
                     "Choices": [
                       {
+                        "Comment": "R2 exists",
                         "Next": "Decompress R2",
-                        "Condition": "{% $fastqObjDict.r2OraFileUriSrc ? true : false %}",
-                        "Comment": "R2 exists"
+                        "Condition": "{% (\n  $fastqObjDict.r2OraFileUriSrc ? true : false\n) and \n(\n  $jobType != 'READ_COUNT_CALCULATION'\n) %}"
                       }
                     ],
                     "Default": "Pass"
@@ -295,12 +265,16 @@
                                 "Value": "{% $fastqObjDict.r2OraFileUriSrc %}"
                               },
                               {
+                                "Name": "FASTQ_ID",
+                                "Value": "{% $fastqIdListIter %}"
+                              },
+                              {
                                 "Name": "ORA_INGEST_ID",
                                 "Value": "{% $fastqObjDict.r2OraIngestId %}"
                               },
                               {
                                 "Name": "GZIP_COMPRESSION_SIZE_IN_BYTES",
-                                "Value": "{% $string($fastqObjDict.r2GzipFileSizeInBytes) %}"
+                                "Value": "{% $string($fastqObjDict.r2GzipFileSizeInBytes ? $fastqObjDict.r2GzipFileSizeInBytes : -1) %}"
                               },
                               {
                                 "Name": "OUTPUT_GZIP_URI",
@@ -317,6 +291,10 @@
                               {
                                 "Name": "JOB_TYPE",
                                 "Value": "{% $jobType %}"
+                              },
+                              {
+                                "Name": "TOTAL_READ_COUNT",
+                                "Value": "{% $string($fastqObjDict.totalReadCount) %}"
                               }
                             ]
                           }
@@ -361,9 +339,9 @@
                     "Type": "Choice",
                     "Choices": [
                       {
+                        "Comment": "R2 file exists",
                         "Next": "Get R2 Object",
-                        "Condition": "{% $fastqObjDict.r2OraFileUriSrc ? true : false %}",
-                        "Comment": "R2 file exists"
+                        "Condition": "{% (\n  $fastqObjDict.r2OraFileUriSrc ? true : false\n) and \n(\n  $jobType != 'READ_COUNT_CALCULATION'\n) %}"
                       }
                     ],
                     "Default": "Pass (2)"
@@ -449,6 +427,29 @@
         }
       ],
       "End": true
+    },
+    "Needs Read Count": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Arguments": {
+        "Entries": [
+          {
+            "Detail": {
+              "taskToken": "{% $states.context.Task.Token %}",
+              "payload": {
+                "fastqIdList": "{% $fastqIdList %}",
+                "requirements": {
+                  "hasReadCountInformation": true
+                }
+              }
+            },
+            "DetailType": "${__fastq_sync_detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__stack_source__}"
+          }
+        ]
+      },
+      "Next": "For each fastq pair"
     }
   },
   "QueryLanguage": "JSONata"

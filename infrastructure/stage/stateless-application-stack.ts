@@ -8,7 +8,6 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { getS3BucketName } from './s3';
 import { buildDecompressionFargateTask } from './ecs';
 import { buildAllStepFunctions } from './step-functions';
 import {
@@ -46,7 +45,7 @@ export class StatelessApplicationStack extends cdk.Stack {
     );
 
     // Get the S3 bucket
-    const s3Bucket = s3.Bucket.fromBucketName(this, 's3Bucket', getS3BucketName());
+    const s3Bucket = s3.Bucket.fromBucketName(this, 's3Bucket', props.s3BucketName);
 
     // Get the event bus
     const eventBus = events.EventBus.fromEventBusName(this, 'eventBus', props.eventBusName);
@@ -103,6 +102,9 @@ export class StatelessApplicationStack extends cdk.Stack {
 
       /* SSM Parameters */
       hostedZoneSsmParameter: hostedZoneNameSsmParameter,
+
+      /* S3 Stuff */
+      s3Bucket: s3Bucket,
     });
 
     // Build the API Gateway

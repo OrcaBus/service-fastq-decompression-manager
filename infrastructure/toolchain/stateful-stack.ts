@@ -15,9 +15,9 @@ export class StatefulStack extends cdk.Stack {
       stack: StatefulApplicationStack,
       stackName: 'StatefulFastqDecompressionStack',
       stackConfig: {
-        beta: getStatefulStackProps(),
-        gamma: getStatefulStackProps(),
-        prod: getStatefulStackProps(),
+        beta: getStatefulStackProps('BETA'),
+        gamma: getStatefulStackProps('GAMMA'),
+        prod: getStatefulStackProps('PROD'),
       },
       pipelineName: 'StatefulFastqDecompressionStackPipeline',
       cdkSynthCmd: ['pnpm install --frozen-lockfile --ignore-scripts', 'pnpm cdk-stateful synth'],

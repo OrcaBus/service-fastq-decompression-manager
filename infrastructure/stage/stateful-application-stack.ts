@@ -23,6 +23,6 @@ export class StatefulApplicationStack extends cdk.Stack {
     });
 
     // Part 2 - Build S3 Bucket
-    createJobsBucket(this);
+    createJobsBucket(this, props.s3BucketName);
   }
 }

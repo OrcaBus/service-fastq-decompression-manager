@@ -71,18 +71,25 @@ function buildNewGzipFileSizeCalculationJobAsyncRequestEventPattern(): EventPatt
   return createNewEventAsyncEventPattern(EVENT_DETAIL_TYPE_MAP['GZIP_FILE_SIZE_CALCULATION_ASYNC']);
 }
 
-function buildNewMd5SumFileSizeCalculationJobSyncRequestEventPattern(): EventPattern {
+function buildNewMd5SumCalculationJobSyncRequestEventPattern(): EventPattern {
   return createNewEventSyncEventPattern(
     EVENT_DETAIL_TYPE_MAP['ORA_TO_RAW_MD5SUM_CALCULATION_SYNC']
   );
 }
 
-function buildNewMd5SumFileSizeCalculationJobAsyncRequestEventPattern(): EventPattern {
+function buildNewMd5SumCalculationJobAsyncRequestEventPattern(): EventPattern {
   return createNewEventAsyncEventPattern(
     EVENT_DETAIL_TYPE_MAP['ORA_TO_RAW_MD5SUM_CALCULATION_ASYNC']
   );
 }
 
+function buildNewReadCountFileSizeCalculationJobSyncRequestEventPattern(): EventPattern {
+  return createNewEventSyncEventPattern(EVENT_DETAIL_TYPE_MAP['READ_COUNT_CALCULATION_SYNC']);
+}
+
+function buildNewReadCountFileSizeCalculationJobAsyncRequestEventPattern(): EventPattern {
+  return createNewEventAsyncEventPattern(EVENT_DETAIL_TYPE_MAP['READ_COUNT_CALCULATION_ASYNC']);
+}
 /* Heartbeat scheduler */
 function buildHeartBeatEventBridgeRule(
   scope: Construct,
@@ -163,7 +170,7 @@ export function buildEventBridgeRules(
           ruleObject: new events.Rule(scope, eventBridgeName, {
             ruleName: eventBridgeName,
             eventBus: props.eventBus,
-            eventPattern: buildNewMd5SumFileSizeCalculationJobSyncRequestEventPattern(),
+            eventPattern: buildNewMd5SumCalculationJobSyncRequestEventPattern(),
           }),
         });
         break;
@@ -174,7 +181,29 @@ export function buildEventBridgeRules(
           ruleObject: new events.Rule(scope, eventBridgeName, {
             ruleName: eventBridgeName,
             eventBus: props.eventBus,
-            eventPattern: buildNewMd5SumFileSizeCalculationJobAsyncRequestEventPattern(),
+            eventPattern: buildNewMd5SumCalculationJobAsyncRequestEventPattern(),
+          }),
+        });
+        break;
+      }
+      case 'newReadCountCalculationJobRequestSyncEventRule': {
+        eventBridgeObjects.push({
+          ruleName: eventBridgeName,
+          ruleObject: new events.Rule(scope, eventBridgeName, {
+            ruleName: eventBridgeName,
+            eventBus: props.eventBus,
+            eventPattern: buildNewReadCountFileSizeCalculationJobSyncRequestEventPattern(),
+          }),
+        });
+        break;
+      }
+      case 'newReadCountCalculationJobRequestEventRule': {
+        eventBridgeObjects.push({
+          ruleName: eventBridgeName,
+          ruleObject: new events.Rule(scope, eventBridgeName, {
+            ruleName: eventBridgeName,
+            eventBus: props.eventBus,
+            eventPattern: buildNewReadCountFileSizeCalculationJobAsyncRequestEventPattern(),
           }),
         });
         break;

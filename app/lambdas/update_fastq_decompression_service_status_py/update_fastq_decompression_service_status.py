@@ -13,6 +13,7 @@ JobType = Literal[
     'ORA_DECOMPRESSION',
     'GZIP_FILESIZE_CALCULATION',
     'RAW_MD5SUM_CALCULATION',
+    'READ_COUNT_CALCULATION'
 ]
 
 
@@ -105,7 +106,7 @@ def handler(event, context):
                         "fastqId": fastq_iter_,
                         "gzipFileSizesByOraFileIngestIdList": next(filter(
                             lambda metadata_json_fastq_pair_dicts_iter_: (
-                                metadata_json_fastq_pair_dicts_iter_['ingestId'] == fastq_iter_
+                                metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
                             ),
                             metadata_json_fastq_pair_dicts_list
                         ))['gzipFileSize']
@@ -126,7 +127,7 @@ def handler(event, context):
                         "fastqId": fastq_iter_,
                         "rawMd5sumByOraFileIngestIdList": next(filter(
                             lambda metadata_json_fastq_pair_dicts_iter_: (
-                                metadata_json_fastq_pair_dicts_iter_['ingestId'] == fastq_iter_
+                                metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
                             ),
                             metadata_json_fastq_pair_dicts_list
                         ))['rawMd5sum']
@@ -136,6 +137,27 @@ def handler(event, context):
             }
         )
 
+    elif job_type == 'READ_COUNT_CALCULATION':
+        # We dont have ingest ids for read count calculation,
+        # Instead we just have the fastq ids and the matching read count integers
+        update_status(
+            job_id=job_id,
+            job_status=status,
+            output={
+                "readCountList": list(map(
+                    lambda fastq_iter_: {
+                        "fastqId": fastq_iter_,
+                        "readCount": next(filter(
+                            lambda metadata_json_fastq_pair_dicts_iter_: (
+                                metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
+                            ),
+                            metadata_json_fastq_pair_dicts_list
+                        ))['readCount']
+                    },
+                    fastq_id_list
+                ))
+            }
+        )
 #
 # if __name__ == "__main__":
 #     from os import environ

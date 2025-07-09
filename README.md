@@ -123,7 +123,7 @@ The output to the task token will be as follows:
 These events should only be used by other step function services.
 In order to run the Gzip FileSize without a task token, one can simply just interact with the REST API.
 This will be used by the fastq manager whenever a request to run to calculate the gzip file size is made.
-A user may also specify a fastqIdList instead of a fastqIdList,
+A user may also specify a fastqSetIdList instead of a fastqIdList,
 
 ```json5
 {
@@ -203,6 +203,49 @@ When using a task token the output will be as follows:
 }
 ```
 
+### Read Count Calculation Request Events
+
+Use this service to calcuate the number of reads in a fastq ORA file
+This service is invoked by the fastq manager whenever a request to run to calculate the read count is made.
+
+This service may also be used internally by the fastq decompression service if a gzip calculation request is made
+but we don't have the number of reads available. By having the number of reads available, the decompression service
+can instead only decompress the first `maxReads` number of reads for the gzip compression file size calculation and
+then use the ratio to estimate how large the overall gzip file size will be.
+
+
+```json5
+{
+  // Event Bus Name is always 'OrcaBusMain'
+  "EventBusName": "OrcaBusMain",
+  "Source": "anysourceyouwant",
+  "DetailType": "ReadCountCalculationRequestSync",
+  "Detail": {
+      "taskToken": "string",
+      "payload": {
+        "fastqIdList": [
+          "fqr.1234456",
+        ]
+      }
+  }
+}
+```
+
+The output to the task token will be as follows:
+
+```json5
+{
+  "Output": {
+    "readCountList": [
+      {
+        "fastqId": "fqr.1234456",
+        "readCount": 12345678 // Number of reads in the fastq file
+      }
+    ]
+  }
+}
+```
+
 
 ### Published Events
 
@@ -257,7 +300,7 @@ These events are published by the service to announce state changes of the decom
 
 ![step-function-diagram](./docs/workflow-studio-exports/handle-terminal-decompression-state-change-event.svg)
 
-#### Heart Beat Montir
+#### Heart Beat Monitor
 
 ![step-function-diagram](./docs/workflow-studio-exports/heart-beat-monitor.svg)
 

@@ -6,6 +6,9 @@ export interface StatefulApplicationStackConfig {
   decompressionJobsTableName: string;
   decompressionJobsTableIndexes: string[];
   taskTokenTableName: string;
+
+  // S3 stuff
+  s3BucketName: string;
 }
 
 export interface StatelessApplicationStackConfig {
@@ -19,6 +22,10 @@ export interface StatelessApplicationStackConfig {
 
   // Stage Name
   stageName: StageName;
+
+  // S3 stuff
+  s3BucketName: string;
+
   /* API Stuff */
   apiGatewayCognitoProps: OrcaBusApiGatewayProps;
 }

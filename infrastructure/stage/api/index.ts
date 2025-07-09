@@ -27,7 +27,6 @@ import {
 } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Construct } from 'constructs';
 import { BuildApiIntegrationProps, BuildHttpRoutesProps, LambdaApiProps } from './interfaces';
-import { getS3BucketName } from '../s3';
 
 export function buildApiInterfaceLambda(scope: Construct, props: LambdaApiProps) {
   // Create the lambda function
@@ -92,7 +91,7 @@ export function buildApiInterfaceLambda(scope: Construct, props: LambdaApiProps)
   );
 
   /* Add decompression job env vars */
-  lambdaFunction.addEnvironment('DECOMPRESSION_JOB_S3_BUCKET', getS3BucketName());
+  lambdaFunction.addEnvironment('DECOMPRESSION_JOB_S3_BUCKET', props.s3Bucket.bucketName);
   lambdaFunction.addEnvironment('DECOMPRESSION_JOB_METADATA_PREFIX', S3_DEFAULT_METADATA_PREFIX);
   lambdaFunction.addEnvironment(
     'DECOMPRESSION_JOB_DATA_OUTPUT_PREFIX',

@@ -14,6 +14,10 @@ if [[ ! -v S3_DECOMPRESSION_BUCKET ]]; then
   exit 1
 fi
 
+# Parameter to help calculate the gzipped file size
+# without needing to decompress the entire file
+MAX_READS_IF_TOTAL_READ_COUNT_IS_SET="10000000"  # 10 million reads
+
 # Inputs
 if [[ ! -v INPUT_ORA_URI ]]; then
   echo "$(date -Iseconds): Error! Expected env var 'INPUT_ORA_URI' but was not found" 1>&2
@@ -77,10 +81,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   	wget \
   	  --quiet \
   	  --output-document /dev/stdout \
-  	  "$(  \
-  	    python3 scripts/get_icav2_download_url.py \
-  	    "${INPUT_ORA_URI}"
-  	  )" || \
+  	  "${presigned_url}" || \
   	true
   ) | \
   (
@@ -163,18 +164,46 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
   # to calculate the gzipped file size
   echo "$(date -Iseconds): Calculating the gzipped file size" 1>&2
   gzip_file_size_in_bytes="$( \
-  	wget \
-  	  --quiet \
-  	  --output-document /dev/stdout \
-  	  "${presigned_url}" | \
-  	/usr/local/bin/orad \
-  	  --gz \
-  	  --gz-level 1 \
-  	  --stdout \
-  	  --ora-reference "${ORADATA_PATH}" \
-  	  - | \
-  	wc -c \
+    ( \
+	  wget \
+		--quiet \
+		--output-document /dev/stdout \
+		"${presigned_url}" || \
+	  true
+	) | \
+	(
+	  /usr/local/bin/orad \
+		--raw \
+		--stdout \
+		--ora-reference "${ORADATA_PATH}" \
+		- || \
+	  true
+	) | \
+	(
+	    # If total read count is set we (and more than the max reads to downlaod)
+	    # we can instead calculate the gzipped file size
+	    # By only reading the first N reads
+	    # Then calculating the gzipped file size from the ratio of the total read count
+	    # And the gzipped file size
+		if [[ "${TOTAL_READ_COUNT}" -gt "${MAX_READS_IF_TOTAL_READ_COUNT_IS_SET}" ]]; then
+		  head -n "$(( "${MAX_READS_IF_TOTAL_READ_COUNT_IS_SET}" * 4 ))"
+		else
+		  cat
+		fi
+	) | \
+	(
+	  pigz \
+		--stdout \
+		--fast
+	) | \
+	wc -c
   )"
+
+  # Now if the total read count is set, we can calculate the gzipped file size
+  # From the ratio of the total read count
+  if [[ "${TOTAL_READ_COUNT}" -gt "${MAX_READS_IF_TOTAL_READ_COUNT_IS_SET}" ]]; then
+	gzip_file_size_in_bytes="$(( gzip_file_size_in_bytes * TOTAL_READ_COUNT / MAX_READS_IF_TOTAL_READ_COUNT_IS_SET ))"
+  fi
 
   echo "$(date -Iseconds): Gzipped file size is ${gzip_file_size_in_bytes} bytes" 1>&2
 
@@ -259,10 +288,10 @@ elif [[ "${JOB_TYPE}" == "READ_COUNT_CALCULATION" ]]; then
   # Write the read count (and linked ora ingest id) to a file
   jq --null-input --raw-output \
 	--argjson read_count "${read_count}" \
-	--arg ingest_id "${ORA_INGEST_ID}" \
+	--arg fastq_id "${FASTQ_ID}" \
   	'
   		{
-  			"ingestId": $ingest_id,
+  			"fastqId": $fastq_id,
   			"readCount": $read_count
   		}
   	' > output.json
