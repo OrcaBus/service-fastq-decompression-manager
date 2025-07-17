@@ -83,8 +83,8 @@
         },
         {
           "Next": "Needs Read Count",
-          "Condition": "{% $jobType = 'GZIP_FILESIZE_CALCULATION' %}",
-          "Comment": "Is Gzip Filesize Calculation Job"
+          "Condition": "{% $jobType = 'GZIP_FILESIZE_CALCULATION' or $sampling %}",
+          "Comment": "Is Gzip Filesize Calculation Job Or Sampling Required"
         }
       ],
       "Default": "For each fastq pair"
