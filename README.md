@@ -1,42 +1,45 @@
 # Fastq Decompression Manager Microservice
 
-<!-- TOC -->
-* [Fastq Decompression Manager Microservice](#fastq-decompression-manager-microservice)
-  * [Service Description](#service-description)
-    * [API Endpoints](#api-endpoints)
-    * [Consumed Events](#consumed-events)
-      * [Decompression Request events](#decompression-request-events)
-      * [GZIP FileSize Request events](#gzip-filesize-request-events)
-      * [Raw MD5Sum Calculation Request events](#raw-md5sum-calculation-request-events)
-    * [Published Events](#published-events)
-      * [Decompression State Change events](#decompression-state-change-events)
-    * [Step functions summary](#step-functions-summary)
-      * [Handle new job request with task token](#handle-new-job-request-with-task-token)
-      * [Run Decompression Job](#run-decompression-job)
-      * [Handle Terminal Decompression State Change Events](#handle-terminal-decompression-state-change-events)
-      * [Heart Beat Montir](#heart-beat-montir)
-    * [(Internal) Data states & persistence model](#internal-data-states--persistence-model)
-    * [Major Business Rules](#major-business-rules)
-    * [Permissions & Access Control](#permissions--access-control)
-    * [Change Management](#change-management)
-      * [Versioning strategy :construction:](#versioning-strategy-construction)
-      * [Release management :construction:](#release-management-construction)
-  * [Infrastructure & Deployment](#infrastructure--deployment)
-    * [Stateful](#stateful)
-    * [Stateless](#stateless)
-    * [CDK Commands](#cdk-commands)
-    * [Stacks :construction:](#stacks-construction)
-  * [Development :construction:](#development-construction)
-    * [Project Structure](#project-structure)
-    * [Setup](#setup)
-      * [Requirements](#requirements)
-      * [Install Dependencies](#install-dependencies)
-      * [First Steps](#first-steps)
-    * [Conventions](#conventions)
-    * [Linting & Formatting](#linting--formatting)
-    * [Testing](#testing)
-  * [Glossary & References :construction:](#glossary--references-construction)
-<!-- TOC -->
+- [Service Description](#service-description)
+  - [Related Services](#related-services)
+    - [Upstream Services](#upstream-services)
+    - [Co-dependent services](#co-dependent-services)
+    - [Fastq Decompression Manager Customers](#fastq-decompression-manager-customers)
+  - [API Endpoints](#api-endpoints)
+  - [Consumed Events](#consumed-events)
+    - [Decompression Request events](#decompression-request-events)
+    - [GZIP FileSize Request events](#gzip-filesize-request-events)
+    - [Raw MD5Sum Calculation Request events](#raw-md5sum-calculation-request-events)
+  - [Read Count Calculation Request Events](#read-count-calculation-request-events)
+  - [Published Events](#published-events)
+    - [Decompression State Change events](#decompression-state-change-events)
+  - [Step functions summary](#step-functions-summary)
+    - [Handle new job request with task token](#handle-new-job-request-with-task-token)
+    - [Run Decompression Job](#run-decompression-job)
+    - [Handle Terminal Decompression State Change Events](#handle-terminal-decompression-state-change-events)
+    - [Heart Beat Monitor](#heart-beat-monitor)
+  - [(Internal) Data states \& persistence model](#internal-data-states--persistence-model)
+  - [Major Business Rules](#major-business-rules)
+  - [Permissions \& Access Control](#permissions--access-control)
+  - [Change Management](#change-management)
+    - [Versioning strategy :construction:](#versioning-strategy-construction)
+    - [Release management :construction:](#release-management-construction)
+- [Infrastructure \& Deployment](#infrastructure--deployment)
+  - [Stateful](#stateful)
+  - [Stateless](#stateless)
+  - [CDK Commands](#cdk-commands)
+  - [Stacks :construction:](#stacks-construction)
+- [Development :construction:](#development-construction)
+  - [Project Structure](#project-structure)
+  - [Setup](#setup)
+    - [Requirements](#requirements)
+    - [Install Dependencies](#install-dependencies)
+    - [First Steps](#first-steps)
+  - [Conventions](#conventions)
+  - [Linting \& Formatting](#linting--formatting)
+  - [Testing](#testing)
+- [Glossary \& References :construction:](#glossary--references-construction)
+
 
 Service Description
 --------------------------------------------------------------------------------
@@ -49,6 +52,23 @@ to complete before proceeding with their own processing. Saving these services f
 stateful logic to track the decompression progress.
 
 ![service-overview](./docs/drawio-exports/fastq-unarchiving.drawio.svg)
+
+### Related Services
+
+#### Upstream Services
+
+- [File Manager](https://github.com/OrcaBus/service-filemanager)
+
+#### Co-dependent services
+
+- [Fastq Unarchiving Service]((https://github.com/OrcaBus/service-fastq-unarchving-manager))
+- [Fastq Sync Service](https://github.com/OrcaBus/service-fastq-sync-manager)
+- [Fastq Manager Service](https://github.com/OrcaBus/service-fastq-manager)
+
+#### Fastq Decompression Manager Customers
+
+- [Dragen TSO500 ctDNA Pipeline Service](https://github.com/OrcaBus/service-dragen-tso500-ctdna-pipeline-manager)
+
 
 ### API Endpoints
 
@@ -94,7 +114,13 @@ need to change the DetailType from `OraDecompressionRequestSync` to `OraDecompre
         // The maximum number of reads to decompress for each file
         // This is useful for services such as the 'qc' service or 'ntsm' services
         // That only need a limited amount of reads to perform their analysis
-        "maxReads": 1000000
+        "maxReads": 1000000,
+        // Used in conjunction with maxReads
+        // If sampling is set to false, the service will decompress the first maxReads number of reads
+        // If sampling is set to true, the service will decompress a random sample of maxReads number of reads
+        // This is useful when generating qc statistics where we want coverage over all tiles
+        // on a lane, but we don't need to decompress the entire file
+        "sampling": true
       }
   }
 }
@@ -150,7 +176,7 @@ The output to the task token will be as follows:
     "gzipFileSizeList": [
       {
         "fastqId": "fqr.1234456",
-        "gzipFileSizesByOraFileIngestIdList": [{
+        "gzipFileSizeByOraFileIngestIdList": [{
           "ingestId": "INGEST_ID",
           "gzipFileSize": 12345678 // Size in bytes
         }]
