@@ -13,6 +13,8 @@ export type EventRuleNamesList =
   | 'newGzipFileSizeCalculationJobRequestSyncEventRule'
   | 'newRawMd5sumCalculationJobRequestEventRule'
   | 'newRawMd5sumCalculationJobRequestSyncEventRule'
+  | 'newReadCountCalculationJobRequestEventRule'
+  | 'newReadCountCalculationJobRequestSyncEventRule'
   // Internal Heartbeat
   | 'heartbeatDecompressionJobsScheduler' // HEART_BEAT_SCHEDULER_RULE_NAME
   // Decompression state change event rule (for sync monitor)
@@ -25,6 +27,8 @@ export const eventRuleNamesList: EventRuleNamesList[] = [
   'newGzipFileSizeCalculationJobRequestSyncEventRule',
   'newRawMd5sumCalculationJobRequestEventRule',
   'newRawMd5sumCalculationJobRequestSyncEventRule',
+  'newReadCountCalculationJobRequestEventRule',
+  'newReadCountCalculationJobRequestSyncEventRule',
   HEART_BEAT_SCHEDULER_RULE_NAME, // Constant so that the step functions can use the placeholder
   'decompressionStateChangeEventRule',
 ];

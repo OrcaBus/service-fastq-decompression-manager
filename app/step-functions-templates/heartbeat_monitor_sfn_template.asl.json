@@ -135,7 +135,7 @@
             },
             "Next": "has task token",
             "Assign": {
-              "taskToken": "{% $states.result.Item ? $states.result.Item.taskToken.S : null %}"
+              "taskToken": "{% $states.result.Item ? $states.result.Item.task_token.S : null %}"
             }
           },
           "has task token": {

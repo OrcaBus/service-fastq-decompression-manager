@@ -6,7 +6,7 @@ for both read1 and read2
 """
 
 from orcabus_api_tools.fastq import get_fastq
-from orcabus_api_tools.fastq.models import BoolAllEnum, FastqListRow
+from orcabus_api_tools.fastq.models import FastqListRow
 import re
 
 
@@ -22,12 +22,31 @@ def get_gzip_file_size_in_bytes(fastq_obj: FastqListRow, read_num: str, max_read
     Calculate the gzip file size in bytes based on the fastq object and max_reads.
     If max_reads is -1, return the full gzipCompressionSizeInBytes.
     Otherwise, calculate it proportionally to the total read count.
+    If we don't have a readcount,
     """
+    # First check we have the gzip compression size in bytes available
+    if fastq_obj['readSet'][read_num].get('gzipCompressionSizeInBytes', None) is None:
+        # If not, return -1
+        return -1
+
+    # If the max reads are not set
+    # Return the full gzipCompressionSizeInBytes
     if max_reads == -1:
         return fastq_obj['readSet'][read_num]['gzipCompressionSizeInBytes']
 
+    # If we don't have a read count, we can't predict base on the size
+    # So again return -1
+    if fastq_obj.get('readCount', None) is None:
+        return -1
+
+    # Otherwise return the gzipCompressionSizeInBytes proportional to the read count we're after
     return (
-        (fastq_obj['readSet'][read_num]['gzipCompressionSizeInBytes'] * min(max_reads, fastq_obj['readCount'])) /
+        (
+            fastq_obj['readSet'][read_num]['gzipCompressionSizeInBytes'] *
+            min(
+                max_reads, fastq_obj['readCount']
+            )
+        ) /
         fastq_obj['readCount']
     )
 
@@ -101,14 +120,13 @@ def handler(event, context):
     metadata_path_prefix = event.get("metadataPathPrefix")
     max_reads = event.get("maxReads")
 
-
     if not fastq_id:
         raise ValueError("Expected 'fastqId' in event")
 
     # Get the fastq object using the provided fastq_id
     fastq_obj = get_fastq(
         fastq_id=fastq_id,
-        includeS3Details=BoolAllEnum.true.value
+        includeS3Details=True
     )
 
     # Get metadata json fastq pair dicts for read1
@@ -121,6 +139,7 @@ def handler(event, context):
         "r1GzipFileUriDest": get_gzip_file_uri_dest(fastq_obj, 'r1', output_uri_prefix),
         "r1OutputMetadataUri": get_metadata_uri(fastq_obj, 'r1', metadata_bucket, metadata_path_prefix),
         "r1OutputMetadataPath": get_metadata_path(fastq_obj, 'r1', metadata_path_prefix),
+        "totalReadCount": fastq_obj.get('readCount', -1),
     }
 
     if fastq_obj['readSet'].get('r2', None) is None:

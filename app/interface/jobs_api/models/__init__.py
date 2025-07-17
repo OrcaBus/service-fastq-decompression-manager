@@ -46,7 +46,7 @@ class GzipFileSizeCalculationOutputObjectItem(BaseModel):
     )
 
     ingest_id: str
-    gzip_file_size: Optional[int] = None
+    gzip_file_size_in_bytes: Optional[int] = None
 
 
 class GzipFileSizeCalculationOutputsFastqId(BaseModel):

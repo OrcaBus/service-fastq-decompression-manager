@@ -1,6 +1,11 @@
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 
 import * as path from 'path';
+import {
+  ACCOUNT_ID_ALIAS,
+  REGION,
+  StageName,
+} from '@orcabus/platform-cdk-constructs/shared-config/accounts';
 
 // Directory constants
 export const APP_ROOT = path.join(__dirname, '../../app');
@@ -11,6 +16,7 @@ export const INTERFACE_DIR = path.join(APP_ROOT, 'interface');
 
 // API constants
 export const API_VERSION = 'v1';
+export const API_NAME = 'FastqDecompressionAPI';
 export const FASTQ_DECOMPRESSION_SUBDOMAIN_NAME = 'fastq-decompression';
 
 // Table constants
@@ -20,8 +26,15 @@ export const TASK_TOKEN_JOB_SORT_KEY = 'job_id';
 export const JOB_API_TABLE_NAME = 'FastqDecompressionJobsTable';
 export const JOB_API_TABLE_INDEXES = ['status'];
 
+// Step Functions constants
+export const FASTQ_DECOMPRESSION_STEP_FUNCTION_NAME_PREFIX = 'fastq-deora';
+
 // S3 constants
-export const S3_BUCKET_NAME = `fastq-decompression-jobs-__ACCOUNT_ID__-__REGION__`;
+export const S3_BUCKET_NAME: Record<StageName, string> = {
+  BETA: `fastq-decompression-jobs-${ACCOUNT_ID_ALIAS.BETA}-${REGION}`,
+  GAMMA: `fastq-decompression-jobs-${ACCOUNT_ID_ALIAS.GAMMA}-${REGION}`,
+  PROD: `fastq-decompression-jobs-${ACCOUNT_ID_ALIAS.PROD}-${REGION}`,
+};
 export const S3_DEFAULT_DECOMPRESSION_PREFIX = `decompression-data/`;
 export const S3_DEFAULT_METADATA_PREFIX = `metadata/`;
 
@@ -31,9 +44,8 @@ export const DEFAULT_HEART_BEAT_INTERVAL = Duration.seconds(300); // 5 minutes i
 
 /* Event constants */
 export const EVENT_BUS_NAME = 'OrcaBusMain';
-
-/* ICAv2 Copy Sync constants */
-export const FASTQ_SYNC_EVENT_DETAIL_TYPE_EXTERNAL = 'fastqSync';
+export const DECOMPRESSION_JOB_STATE_CHANGE_DETAIL_TYPE = 'DecompressionJobStateChange';
+export const STACK_EVENT_SOURCE = 'orcabus.fastqdecompression';
 
 export const EVENT_DETAIL_TYPE_MAP: Record<string, string> = {
   ORA_DECOMPRESSION_REQUEST_SYNC: 'OraDecompressionRequestSync',
@@ -42,7 +54,16 @@ export const EVENT_DETAIL_TYPE_MAP: Record<string, string> = {
   GZIP_FILE_SIZE_CALCULATION_ASYNC: 'GzipFileSizeCalculationRequest',
   ORA_TO_RAW_MD5SUM_CALCULATION_SYNC: 'OraToRawMd5sumCalculationRequestSync',
   ORA_TO_RAW_MD5SUM_CALCULATION_ASYNC: 'OraToRawMd5sumCalculationRequest',
+  READ_COUNT_CALCULATION_SYNC: 'ReadCountCalculationRequestSync',
+  READ_COUNT_CALCULATION_ASYNC: 'ReadCountCalculationRequest',
 };
 
-export const DECOMPRESSION_JOB_STATE_CHANGE_DETAIL_TYPE = 'DecompressionJobStateChange';
-export const STACK_EVENT_SOURCE = 'orcabus.fastqdecompression';
+/* Miscellaneous constants */
+// Streaming errors from aws s3 cp only occur when the file is larger than 50 GB
+// Which we shouldn't get anywhere near that size for fastq files under 100 million reads
+// Which we estimate should be around 7 GB gzip compressed
+// https://docs.aws.amazon.com/cli/latest/reference/s3/cp.html#options
+export const MIN_READS_TO_REQUIRE_GZIP_STATS = 100_000_000; // 100 million reads
+
+/* External constants */
+export const FASTQ_SYNC_EVENT_DETAIL_TYPE_EXTERNAL = 'FastqSync';

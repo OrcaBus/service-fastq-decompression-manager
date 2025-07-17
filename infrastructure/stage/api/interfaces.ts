@@ -5,6 +5,7 @@ import { OrcaBusApiGateway } from '@orcabus/platform-cdk-constructs/api-gateway'
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { SfnObject } from '../step-functions/interfaces';
 import { IStringParameter } from 'aws-cdk-lib/aws-ssm/lib/parameter';
+import { IBucket } from 'aws-cdk-lib/aws-s3';
 
 export interface LambdaApiProps {
   /* The lambda name */
@@ -22,6 +23,9 @@ export interface LambdaApiProps {
 
   /* Hosted Zone SSM Parameter */
   hostedZoneSsmParameter: IStringParameter;
+
+  /* S3 Stuff */
+  s3Bucket: IBucket;
 }
 
 /** API Interfaces */

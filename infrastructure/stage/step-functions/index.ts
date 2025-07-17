@@ -21,8 +21,10 @@ import {
 import { camelCaseToSnakeCase } from '../utils';
 import {
   EVENT_BUS_NAME,
+  FASTQ_DECOMPRESSION_STEP_FUNCTION_NAME_PREFIX,
   FASTQ_SYNC_EVENT_DETAIL_TYPE_EXTERNAL,
   HEART_BEAT_SCHEDULER_RULE_NAME,
+  MIN_READS_TO_REQUIRE_GZIP_STATS,
   S3_DEFAULT_METADATA_PREFIX,
   STACK_EVENT_SOURCE,
   STEP_FUNCTIONS_DIR,
@@ -78,6 +80,12 @@ function createStateMachineDefinitionSubstitutions(props: SfnProps): {
     definitionSubstitutions['__event_bus_name__'] = EVENT_BUS_NAME;
     definitionSubstitutions['__stack_source__'] = STACK_EVENT_SOURCE;
     definitionSubstitutions['__fastq_sync_detail_type__'] = FASTQ_SYNC_EVENT_DETAIL_TYPE_EXTERNAL;
+  }
+
+  /* Special substitutions */
+  if (props.stateMachineName === 'runDecompressionJob') {
+    definitionSubstitutions['__min_reads_to_require_gzip_stats__'] =
+      MIN_READS_TO_REQUIRE_GZIP_STATS.toString();
   }
 
   return definitionSubstitutions;
@@ -198,7 +206,7 @@ function buildStepFunction(scope: Construct, props: SfnProps): SfnObject {
 
   /* Create the state machine definition substitutions */
   const stateMachine = new sfn.StateMachine(scope, props.stateMachineName, {
-    stateMachineName: `fastq-deora-${props.stateMachineName}`,
+    stateMachineName: `${FASTQ_DECOMPRESSION_STEP_FUNCTION_NAME_PREFIX}-${props.stateMachineName}`,
     definitionBody: sfn.DefinitionBody.fromFile(
       path.join(STEP_FUNCTIONS_DIR, sfnNameToSnakeCase + `_sfn_template.asl.json`)
     ),

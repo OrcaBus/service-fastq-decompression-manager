@@ -10,13 +10,26 @@ import {
   EventBridgeTargetsProps,
   eventTargetsNameList,
 } from './interfaces';
+import { EventField, RuleTargetInput } from 'aws-cdk-lib/aws-events';
 
 function buildSfnEventBridgeTarget(props: AddSfnAsEventBridgeTargetProps): void {
-  props.eventBridgeRuleObj.addTarget(
-    new eventsTargets.SfnStateMachine(props.stateMachineObj, {
-      input: events.RuleTargetInput.fromEventPath('$.detail'),
-    })
-  );
+  if (!props.jobType) {
+    props.eventBridgeRuleObj.addTarget(
+      new eventsTargets.SfnStateMachine(props.stateMachineObj, {
+        input: events.RuleTargetInput.fromEventPath('$.detail'),
+      })
+    );
+  } else {
+    props.eventBridgeRuleObj.addTarget(
+      new eventsTargets.SfnStateMachine(props.stateMachineObj, {
+        input: RuleTargetInput.fromObject({
+          taskToken: EventField.fromPath('$.detail.taskToken'),
+          payload: EventField.fromPath('$.detail.payload'),
+          jobType: props.jobType,
+        }),
+      })
+    );
+  }
 }
 
 export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void {
@@ -32,6 +45,7 @@ export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void
           stateMachineObj: props.stepFunctionObjects.find(
             (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
           )?.stateMachineObj,
+          jobType: 'ORA_DECOMPRESSION',
         });
         break;
       }
@@ -44,6 +58,7 @@ export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void
           stateMachineObj: props.stepFunctionObjects.find(
             (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
           )?.stateMachineObj,
+          jobType: 'ORA_DECOMPRESSION',
         });
         break;
       }
@@ -56,6 +71,7 @@ export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void
           stateMachineObj: props.stepFunctionObjects.find(
             (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
           )?.stateMachineObj,
+          jobType: 'GZIP_FILESIZE_CALCULATION',
         });
         break;
       }
@@ -68,6 +84,7 @@ export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void
           stateMachineObj: props.stepFunctionObjects.find(
             (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
           )?.stateMachineObj,
+          jobType: 'GZIP_FILESIZE_CALCULATION',
         });
         break;
       }
@@ -80,6 +97,7 @@ export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void
           stateMachineObj: props.stepFunctionObjects.find(
             (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
           )?.stateMachineObj,
+          jobType: 'RAW_MD5SUM_CALCULATION',
         });
         break;
       }
@@ -92,6 +110,7 @@ export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void
           stateMachineObj: props.stepFunctionObjects.find(
             (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
           )?.stateMachineObj,
+          jobType: 'RAW_MD5SUM_CALCULATION',
         });
         break;
       }

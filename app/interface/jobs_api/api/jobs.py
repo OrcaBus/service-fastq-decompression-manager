@@ -182,6 +182,7 @@ async def create_job(job_obj: JobCreate) -> JobResponse:
         "jobId": job_obj.id,
         "jobType": job_obj.job_type,
         "maxReads": job_obj.max_reads if job_obj.max_reads is not None else -1,
+        "sampling": job_obj.sampling if job_obj.sampling is not None else False,
         "outputUriPrefix": job_obj.output_uri_prefix,
         "s3JobMetadataBucket": environ[DECOMPRESSION_JOB_S3_BUCKET_ENV_VAR],
         "s3JobMetadataPrefix": metadata_key_prefix,

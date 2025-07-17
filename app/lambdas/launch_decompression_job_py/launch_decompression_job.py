@@ -4,6 +4,7 @@
 Launch the decompression job with a given payload
 """
 from typing import Dict
+import json
 
 from orcabus_api_tools.fastq_decompression import create_job
 from orcabus_api_tools.fastq_decompression.models import Job
@@ -18,13 +19,44 @@ def handler(event, context) -> Dict[str, Job]:
     if fastq_id_list is None:
         raise ValueError("fastqSetIdList is required in the event payload")
 
+    # Get the output URI prefix
     output_uri_prefix = event.get("outputUriPrefix", None)
-    if output_uri_prefix is None:
-        raise ValueError("outputUriPrefix is required in the event payload")
+
+    # Get the job type
+    job_type = event.get("jobType")
+
+    # Get the max reads
+    max_reads = event.get("maxReads", -1)
+
+    # Get the sampling parameter
+    sampling = event.get("sampling", False)
 
     return {
         "jobObject": create_job(
-            fastq_id_list=fastq_id_list,
-            output_uri_prefix=output_uri_prefix
+            fastqIdList=fastq_id_list,
+            outputUriPrefix=output_uri_prefix,
+            jobType=job_type,
+            maxReads=max_reads,
+            sampling=sampling
         )
     }
+
+
+# if __name__ == "__main__":
+#     from os import environ
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['HOSTNAME_SSM_PARAMETER_NAME'] = '/hosted_zone/umccr/name'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     print(json.dumps(
+#         handler(
+#             {
+#                 "fastqIdList": [
+#                     "fqr.01JQ3BEKS05C74XWT5PYED6KV5"
+#                 ],
+#                 "outputUriPrefix": None,
+#                 "jobType": "ORA_DECOMPRESSION"
+#             },
+#             None
+#         ),
+#         indent=4
+#     ))

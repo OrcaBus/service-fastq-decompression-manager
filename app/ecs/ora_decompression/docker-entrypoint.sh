@@ -14,6 +14,11 @@ if [[ ! -v S3_DECOMPRESSION_BUCKET ]]; then
   exit 1
 fi
 
+# Parameter to help calculate the gzipped file size
+# without needing to decompress the entire file
+MAX_READS_IF_TOTAL_READ_COUNT_IS_SET="10000000"  # 10 million reads
+RANDOM_SAMPLING_SEED="11"  # Must be a fixed value since we need to ensure R1 and R2 return the same reads
+
 # Inputs
 if [[ ! -v INPUT_ORA_URI ]]; then
   echo "$(date -Iseconds): Error! Expected env var 'INPUT_ORA_URI' but was not found" 1>&2
@@ -48,9 +53,36 @@ presigned_url="$(  \
 
 # Download + Upload the ora file as a gzipped compressed file
 if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
-  # Get line count for the max reads
+  # Get the sampling parameter
+  if [[ "${SAMPLING}" == "true" ]]; then
+    SAMPLING_PROPORTION="$( \
+      jq --null-input --raw-output \
+        --argjson maxReads "${MAX_READS}" \
+        --argjson totalReadCount "${TOTAL_READ_COUNT}" \
+        '
+        	if $maxReads > $totalReadCount then
+				1.0
+			else
+				# Calculate the sampling proportion as a percentage
+				# This is the maximum reads divided by the total read count
+				# rounded to 2 decimal places
+				(
+					(( 100 * $maxReads) / $totalReadCount ) | round
+				) / 100
+			end
+        '
+	  )"
+	echo "Sampling Proportion is ${SAMPLING_PROPORTION}" 1>&2
+  fi
+
   if [[ "${MAX_READS}" -gt 0 ]]; then
-	LINE_COUNT="$(( "${MAX_READS}" * 4 ))"
+	line_count="$( \
+	  jq --null-input --raw-output \
+	    --argjson maxReads "${MAX_READS}" \
+	    '
+	      $maxReads * 4
+	    ' \
+	)"
   fi
 
   # Get the icav2 accession credentials if required
@@ -73,14 +105,20 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   # When using qemu-x86_64-static, piping through
   # wget may be difficult, and instead may need to use
   # a <() redirection
+
+  # Steps involved in this massive pipeline (And we have 8 threads to play with)
+  # 1. Download the file using wget (1 thread)
+  # 2. Pipe the file to orad to decompress it (1 threads)
+  # 3. If sampling is enabled, sample the reads using the sampling proportion parameter (1 thread)
+  # 4. If max reads is set, limit the number of reads to the max reads (1 thread)
+  # 5. Pipe the output to pigz to compress it in to gzip format (4 threads)
+  # 6a. If the output gzip uri is not in the S3_DECOMPRESSION_BUCKET, upload to S3 using aws s3 cp icav2 credentials
+  # 6b. If the output gzip uri is in the S3_DECOMPRESSION_BUCKET, upload to S3 using aws s3 cp with task role credentials
   ( \
   	wget \
   	  --quiet \
   	  --output-document /dev/stdout \
-  	  "$(  \
-  	    python3 scripts/get_icav2_download_url.py \
-  	    "${INPUT_ORA_URI}"
-  	  )" || \
+  	  "${presigned_url}" || \
   	true
   ) | \
   (
@@ -92,8 +130,21 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   	true
   ) | \
   (
+  	(
+	  if [[ "${SAMPLING}" == "true" ]]; then
+		seqtk sample \
+		  -s "${RANDOM_SAMPLING_SEED}" \
+		  - \
+		  "${SAMPLING_PROPORTION}"
+	  else
+		cat
+	  fi
+	) || \
+	  true
+  ) | \
+  (
   	if [[ "${MAX_READS}" -gt 0 ]]; then
-	  head -n "${LINE_COUNT}"
+	  head -n "${line_count}"
 	else
 	  cat
 	fi
@@ -101,7 +152,8 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   (
   	pigz \
 	  --stdout \
-	  --fast
+	  --fast \
+	  --processes 4
   ) | \
   (
     if [[ ! "${OUTPUT_GZIP_URI}" =~ s3://${S3_DECOMPRESSION_BUCKET}/ ]]; then
@@ -163,18 +215,46 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
   # to calculate the gzipped file size
   echo "$(date -Iseconds): Calculating the gzipped file size" 1>&2
   gzip_file_size_in_bytes="$( \
-  	wget \
-  	  --quiet \
-  	  --output-document /dev/stdout \
-  	  "${presigned_url}" | \
-  	/usr/local/bin/orad \
-  	  --gz \
-  	  --gz-level 1 \
-  	  --stdout \
-  	  --ora-reference "${ORADATA_PATH}" \
-  	  - | \
-  	wc -c \
+    ( \
+	  wget \
+		--quiet \
+		--output-document /dev/stdout \
+		"${presigned_url}" || \
+	  true
+	) | \
+	(
+	  /usr/local/bin/orad \
+		--raw \
+		--stdout \
+		--ora-reference "${ORADATA_PATH}" \
+		- || \
+	  true
+	) | \
+	(
+	    # If total read count is set we (and more than the max reads to downlaod)
+	    # we can instead calculate the gzipped file size
+	    # By only reading the first N reads
+	    # Then calculating the gzipped file size from the ratio of the total read count
+	    # And the gzipped file size
+		if [[ "${TOTAL_READ_COUNT}" -gt "${MAX_READS_IF_TOTAL_READ_COUNT_IS_SET}" ]]; then
+		  head -n "$(( "${MAX_READS_IF_TOTAL_READ_COUNT_IS_SET}" * 4 ))"
+		else
+		  cat
+		fi
+	) | \
+	(
+	  pigz \
+		--stdout \
+		--fast
+	) | \
+	wc -c
   )"
+
+  # Now if the total read count is set, we can calculate the gzipped file size
+  # From the ratio of the total read count
+  if [[ "${TOTAL_READ_COUNT}" -gt "${MAX_READS_IF_TOTAL_READ_COUNT_IS_SET}" ]]; then
+	gzip_file_size_in_bytes="$(( gzip_file_size_in_bytes * TOTAL_READ_COUNT / MAX_READS_IF_TOTAL_READ_COUNT_IS_SET ))"
+  fi
 
   echo "$(date -Iseconds): Gzipped file size is ${gzip_file_size_in_bytes} bytes" 1>&2
 
@@ -201,7 +281,7 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
 elif [[ "${JOB_TYPE}" == "RAW_MD5SUM_CALCULATION" ]]; then
 
   # Download the file and pipe through orad
-  echo "$(date -Iseconds): Calculating the gzipped file size" 1>&2
+  echo "$(date -Iseconds): Calculating the raw md5sum" 1>&2
   md5sum_str="$( \
   	wget \
   	  --quiet \
@@ -259,10 +339,10 @@ elif [[ "${JOB_TYPE}" == "READ_COUNT_CALCULATION" ]]; then
   # Write the read count (and linked ora ingest id) to a file
   jq --null-input --raw-output \
 	--argjson read_count "${read_count}" \
-	--arg ingest_id "${ORA_INGEST_ID}" \
+	--arg fastq_id "${FASTQ_ID}" \
   	'
   		{
-  			"ingestId": $ingest_id,
+  			"fastqId": $fastq_id,
   			"readCount": $read_count
   		}
   	' > output.json

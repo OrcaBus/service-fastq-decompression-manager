@@ -5,7 +5,7 @@ import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import { StatelessApplicationStack } from '../infrastructure/stage/stateless-application-stack';
 import { getStatefulStackProps, getStatelessStackProps } from '../infrastructure/stage/config';
 import { StatefulApplicationStack } from '../infrastructure/stage/stateful-application-stack';
-import { PROD_ACCOUNT_ID, REGION } from '@orcabus/platform-cdk-constructs/shared-config/accounts';
+import { PROD_ENVIRONMENT } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
   return `${sm.entry.data} [${sm.id}]`;
@@ -21,10 +21,7 @@ describe('cdk-nag-stateless-toolchain-stack', () => {
     {
       // Pick the prod environment to test as it is the most strict
       ...getStatelessStackProps('PROD'),
-      env: {
-        account: PROD_ACCOUNT_ID,
-        region: REGION,
-      },
+      env: PROD_ENVIRONMENT,
     }
   );
 
@@ -55,7 +52,8 @@ describe('cdk-nag-stateful-toolchain-stack', () => {
     'StatefulApplicationStackTestCdkNag',
     {
       // Pick the prod environment to test as it is the most strict
-      ...getStatefulStackProps(),
+      ...getStatefulStackProps('PROD'),
+      env: PROD_ENVIRONMENT,
     }
   );
 
