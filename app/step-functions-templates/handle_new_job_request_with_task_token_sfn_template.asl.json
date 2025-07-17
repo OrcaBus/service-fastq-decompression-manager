@@ -7,7 +7,8 @@
       "Next": "Launch Job",
       "Assign": {
         "taskToken": "{% $states.input.taskToken ? $states.input.taskToken : null %}",
-        "payload": "{% $states.input.payload %}"
+        "payload": "{% $states.input.payload %}",
+        "jobType": "{% $states.input.jobType %}"
       }
     },
     "Launch Job": {
@@ -20,7 +21,10 @@
         "FunctionName": "${__launch_decompression_job_lambda_function_arn__}",
         "Payload": {
           "fastqIdList": "{% $payload.fastqIdList %}",
-          "outputUriPrefix": "{% $payload.outputUriPrefix %}"
+          "outputUriPrefix": "{% $payload.outputUriPrefix ? $payload.outputUriPrefix : null %}",
+          "jobType": "{% $jobType %}",
+          "maxReads": "{% $payload.maxReads ? $payload.maxReads : null %}",
+          "sampling": "{% $payload.sampling ? $payload.sampling : null %}"
         }
       },
       "Retry": [

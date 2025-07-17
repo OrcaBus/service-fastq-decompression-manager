@@ -8,7 +8,7 @@
       "Assign": {
         "id": "{% $states.input.id %}",
         "status": "{% $states.input.status %}",
-        "outputs": "{% $states.input.outputs ? $states.input.outputs : null %}"
+        "output": "{% $states.input.output ? $states.input.output : null %}"
       }
     },
     "Get Job ID": {
@@ -27,7 +27,7 @@
       },
       "Next": "If Job in DB",
       "Assign": {
-        "taskToken": "{% $states.result.Item ? $states.result.Item.taskToken.S : null %}"
+        "taskToken": "{% $states.result.Item ? $states.result.Item.task_token.S : null %}"
       }
     },
     "If Job in DB": {
@@ -48,14 +48,23 @@
           "Next": "Job Succeeded",
           "Condition": "{% $status = 'SUCCEEDED' %}",
           "Comment": "Job Succeeded"
+        },
+        {
+          "Next": "Job failed",
+          "Condition": "{% $status in ['FAILED', 'ABORTED'] %}",
+          "Comment": "Job Failed"
         }
       ],
-      "Default": "Job failed"
+      "Default": "Pass"
+    },
+    "Pass": {
+      "Type": "Pass",
+      "End": true
     },
     "Job Succeeded": {
       "Type": "Task",
       "Arguments": {
-        "Output": "{% $outputs %}",
+        "Output": "{% $output %}",
         "TaskToken": "{% $taskToken %}"
       },
       "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
@@ -77,6 +86,10 @@
       },
       "End": true
     },
+    "Job not in DB": {
+      "Type": "Pass",
+      "End": true
+    },
     "Job failed": {
       "Type": "Task",
       "Arguments": {
@@ -84,10 +97,6 @@
       },
       "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
       "Next": "Delete Job ID from database"
-    },
-    "Job not in DB": {
-      "Type": "Pass",
-      "End": true
     }
   },
   "QueryLanguage": "JSONata"

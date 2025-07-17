@@ -4,6 +4,8 @@ ARG ORAD_REF_DOWNLOAD_URL="https://s3.amazonaws.com/webdata.illumina.com/downloa
 ARG ORA_MOUNT="/opt"
 ARG TARGETPLATFORM
 ARG WRAPICA_VERSION="2.27.1.post20240830140737"
+ARG SEQTK_URL="https://github.com/lh3/seqtk.git"
+ARG SEQTK_VERSION="1.5"
 
 # Install ubuntu basics
 RUN \
@@ -12,25 +14,41 @@ RUN \
     else \
       platform_url="x86_64"; \
     fi && \
+    echo "Standard APT" 1>&2 && \
     apt update -yq && \
     apt upgrade -yq && \
     apt install -yq \
       wget \
       jq \
+      git \
       tar \
       gzip \
       unzip \
       pigz \
       python3.12 \
       python3-pip && \
+    echo "Install wrapica" 1>&2 && \
     python3 -mpip install wrapica=="${WRAPICA_VERSION}" --break-system-packages && \
-    wget \
-      --quiet \
-      --output-document "awscliv2.zip" \
-      "https://awscli.amazonaws.com/awscli-exe-linux-${platform_url}.zip" && \
-    unzip -q "awscliv2.zip" && \
-    ./aws/install && \
-    rm "awscliv2.zip"
+    echo "Install AWS CLI" 1>&2 && \
+    ( \
+      wget \
+        --quiet \
+        --output-document "awscliv2.zip" \
+        "https://awscli.amazonaws.com/awscli-exe-linux-${platform_url}.zip" && \
+      unzip -q "awscliv2.zip" && \
+      ./aws/install && \
+      rm -rf "awscliv2.zip" "aws" \
+    ) && \
+    echo "Install seqtk" 1>&2 && \
+    ( \
+      git clone \
+        --branch "v${SEQTK_VERSION}" \
+        "${SEQTK_URL}" && \
+      cd "$(basename "${SEQTK_URL}" .git)" && \
+      make && \
+      make install \
+    )
+
 
 ## Install qemu-virtualization
 ## Commented out as we now have an orad arm64 binary version

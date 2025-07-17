@@ -49,48 +49,32 @@ def handler(event, context):
 
     if not status == 'SUCCEEDED':
         update_status(
-            job_id=job_id,
-            job_status=status,
-            steps_execution_arn=steps_execution_arn
+            job_id,
+            status=status,
+            stepsExecutionArn=steps_execution_arn
         )
         ## FIXME - need to handle other statuses like FAILED, CANCELLED, etc.
         return
-
-    # Get fastq objects from fastq id list
-    ingest_id_list_by_fastq_ids = list(map(
-        lambda fastq_iter_: get_ingest_ids_by_fastq_id(
-            get_fastq(
-                fastq_id=fastq_iter_
-            )
-        ),
-        fastq_id_list
-    ))
 
     # If the job type is ORA_DECOMPRESSION,
     # we need to map the ingest ids to the metadata json fastq pair dicts
     if job_type == 'ORA_DECOMPRESSION':
         # Now map the gzip file uris to the ingest ids
         update_status(
-            job_id=job_id,
-            job_status=status,
+            job_id,
+            status=status,
             output={
                 "decompressedFileList": list(map(
-                    lambda ingest_id_list_by_fastq_ids_iter_: {
-                        "fastqId": ingest_id_list_by_fastq_ids_iter_['fastqId'],
-                        "decompressedFileUriByOraFileIngestIdList": list(map(
-                            lambda ingest_id_map_iter_: {
-                                "ingestId": ingest_id_map_iter_,
-                                "gzipFileUri": next(filter(
-                                    lambda decompressed_file_uri_iter_: (
-                                        decompressed_file_uri_iter_['ingestId'] == ingest_id_map_iter_
-                                    ),
-                                    metadata_json_fastq_pair_dicts_list
-                                ))['gzipFileUri']
-                            },
-                            ingest_id_list_by_fastq_ids_iter_['ingestIdList']
-                        ))
+                    lambda fastq_iter_: {
+                        "fastqId": fastq_iter_,
+                        "decompressedFileUriByOraFileIngestIdList": next(filter(
+                            lambda metadata_json_fastq_pair_dicts_iter_: (
+                                    metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
+                            ),
+                            metadata_json_fastq_pair_dicts_list
+                        ))['metadataJson'],
                     },
-                    ingest_id_list_by_fastq_ids
+                    fastq_id_list
                 ))
             }
         )
@@ -98,18 +82,18 @@ def handler(event, context):
     elif job_type == 'GZIP_FILESIZE_CALCULATION':
         # Similarly
         update_status(
-            job_id=job_id,
-            job_status=status,
+            job_id,
+            status=status,
             output={
                 "gzipFileSizeList": list(map(
                     lambda fastq_iter_: {
                         "fastqId": fastq_iter_,
-                        "gzipFileSizesByOraFileIngestIdList": next(filter(
+                        "gzipFileSizeByOraFileIngestIdList": next(filter(
                             lambda metadata_json_fastq_pair_dicts_iter_: (
-                                metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
+                                    metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
                             ),
                             metadata_json_fastq_pair_dicts_list
-                        ))['gzipFileSize']
+                        ))['metadataJson']
                     },
                     fastq_id_list
                 ))
@@ -120,17 +104,17 @@ def handler(event, context):
         # Similarly
         update_status(
             job_id=job_id,
-            job_status=status,
+            status=status,
             output={
                 "rawMd5sumList": list(map(
                     lambda fastq_iter_: {
                         "fastqId": fastq_iter_,
                         "rawMd5sumByOraFileIngestIdList": next(filter(
                             lambda metadata_json_fastq_pair_dicts_iter_: (
-                                metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
+                                    metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
                             ),
                             metadata_json_fastq_pair_dicts_list
-                        ))['rawMd5sum']
+                        ))['metadataJson']
                     },
                     fastq_id_list
                 ))
@@ -141,23 +125,25 @@ def handler(event, context):
         # We dont have ingest ids for read count calculation,
         # Instead we just have the fastq ids and the matching read count integers
         update_status(
-            job_id=job_id,
-            job_status=status,
+            job_id,
+            status=status,
             output={
                 "readCountList": list(map(
                     lambda fastq_iter_: {
                         "fastqId": fastq_iter_,
                         "readCount": next(filter(
                             lambda metadata_json_fastq_pair_dicts_iter_: (
-                                metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
+                                    metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
                             ),
                             metadata_json_fastq_pair_dicts_list
-                        ))['readCount']
+                        ))['metadataJson']
                     },
                     fastq_id_list
                 ))
             }
         )
+
+
 #
 # if __name__ == "__main__":
 #     from os import environ
@@ -186,6 +172,47 @@ def handler(event, context):
 #                 "status": "SUCCEEDED",
 #                 "fastqIdList": [
 #                     "fqr.01JQ3BEKS05C74XWT5PYED6KV5"
+#                 ]
+#             },
+#         None
+#         ),
+#         indent=4
+#     ))
+
+
+#
+# if __name__ == "__main__":
+#     from os import environ
+#     import json
+#
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['AWS_PROFILE'] = 'umccr-development'
+#     environ['HOSTNAME_SSM_PARAMETER_NAME'] = '/hosted_zone/umccr/name'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#
+#     print(json.dumps(
+#         handler(
+#             {
+#                 "jobId": "fdj.01JZVA46SH1F4M526716R5MWRY",
+#                 "jobType": "GZIP_FILESIZE_CALCULATION",
+#                 "metadataJsonFastqPairDictsList": [
+#                     {
+#                         "fastqId": "fqr.01JQ3BETTR9JPV33S3ZXB18HBN",
+#                         "metadataJson": [
+#                             {
+#                                 "ingestId": "0197614c-e7d0-7633-bc29-c7b92f4daf12",
+#                                 "gzipFileSizeInBytes": 43994124948
+#                             },
+#                             {
+#                                 "ingestId": "0197614c-fdfc-7623-abf5-5145f606ebd5",
+#                                 "gzipFileSizeInBytes": 46854233741
+#                             }
+#                         ]
+#                     }
+#                 ],
+#                 "status": "SUCCEEDED",
+#                 "fastqIdList": [
+#                     "fqr.01JQ3BETTR9JPV33S3ZXB18HBN"
 #                 ]
 #             },
 #         None

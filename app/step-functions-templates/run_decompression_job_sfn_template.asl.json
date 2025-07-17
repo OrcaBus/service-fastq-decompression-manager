@@ -15,6 +15,7 @@
         "jobType": "{% $states.input.jobType %}",
         "fastqIdList": "{% $states.input.fastqIdList ? $states.input.fastqIdList : null %}",
         "maxReads": "{% $states.input.maxReads ? $states.input.maxReads : -1 %}",
+        "sampling": "{% $states.input.sampling ? $states.input.sampling : false %}",
         "s3JobMetadataBucket": "{% $states.input.s3JobMetadataBucket %}",
         "s3JobMetadataPrefix": "{% $states.input.s3JobMetadataPrefix %}",
         "outputUriPrefix": "{% $states.input.outputUriPrefix %}"
@@ -212,6 +213,10 @@
                                 "Value": "{% $string($maxReads) %}"
                               },
                               {
+                                "Name": "SAMPLING",
+                                "Value": "{% $string($sampling) %}"
+                              },
+                              {
                                 "Name": "JOB_TYPE",
                                 "Value": "{% $jobType %}"
                               },
@@ -287,6 +292,10 @@
                               {
                                 "Name": "MAX_READS",
                                 "Value": "{% $string($maxReads) %}"
+                              },
+                              {
+                                "Name": "SAMPLING",
+                                "Value": "{% $string($sampling) %}"
                               },
                               {
                                 "Name": "JOB_TYPE",
@@ -367,7 +376,7 @@
               }
             ],
             "Output": {
-              "metadataJson": "{% /* https://try.jsonata.org/WzjRyuQxT */\n/* Gather data attribute from each attribute in the result map */\n$states.result.(data) %}"
+              "metadataJson": "{% /* https://try.jsonata.org/WzjRyuQxT */\n/* Gather data attribute from each attribute in the result map */\n [ $states.result.(data) ] %}"
             },
             "Next": "Set map iter output dict"
           },
@@ -375,7 +384,10 @@
             "Type": "Pass",
             "End": true,
             "Output": {
-              "metadataJson": "{% $states.input.metadataJson %}"
+              "metadataJsonWithFastqId": {
+                "fastqId": "{% $fastqIdListIter %}",
+                "metadataJson": "{% $states.input.metadataJson %}"
+              }
             }
           }
         }
@@ -395,7 +407,7 @@
       ],
       "Next": "Update fastq decompression status (complete)",
       "Assign": {
-        "metadataJsonFastqPairDictsList": "{% $states.result.(metadataJson) %}"
+        "metadataJsonFastqPairDictsList": "{% [ $states.result.(metadataJsonWithFastqId) ] %}"
       }
     },
     "Update fastq decompression status (complete)": {

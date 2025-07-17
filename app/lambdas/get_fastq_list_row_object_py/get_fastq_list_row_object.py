@@ -6,7 +6,7 @@ for both read1 and read2
 """
 
 from orcabus_api_tools.fastq import get_fastq
-from orcabus_api_tools.fastq.models import BoolAllEnum, FastqListRow
+from orcabus_api_tools.fastq.models import FastqListRow
 import re
 
 
@@ -120,14 +120,13 @@ def handler(event, context):
     metadata_path_prefix = event.get("metadataPathPrefix")
     max_reads = event.get("maxReads")
 
-
     if not fastq_id:
         raise ValueError("Expected 'fastqId' in event")
 
     # Get the fastq object using the provided fastq_id
     fastq_obj = get_fastq(
         fastq_id=fastq_id,
-        includeS3Details=BoolAllEnum.true.value
+        includeS3Details=True
     )
 
     # Get metadata json fastq pair dicts for read1

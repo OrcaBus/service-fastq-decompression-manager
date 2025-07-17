@@ -58,6 +58,7 @@ class JobBase(BaseModel):
     fastq_id_list: List[str]
     max_reads: Optional[int] = None
     output_uri_prefix: Optional[str] = None
+    sampling: Optional[bool] = None
 
 
 class JobOrcabusId(BaseModel):
