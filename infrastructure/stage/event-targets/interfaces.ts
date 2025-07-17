@@ -24,9 +24,23 @@ export const eventTargetsNameList: EventTargetsNameList[] = [
   'decompressionStateChangeToTaskTokenUnlock',
 ];
 
+export type JobType =
+  | 'ORA_DECOMPRESSION'
+  | 'GZIP_FILESIZE_CALCULATION'
+  | 'RAW_MD5SUM_CALCULATION'
+  | 'READ_COUNT_CALCULATION';
+
+export const jobTypeList: JobType[] = [
+  'ORA_DECOMPRESSION',
+  'GZIP_FILESIZE_CALCULATION',
+  'RAW_MD5SUM_CALCULATION',
+  'READ_COUNT_CALCULATION',
+];
+
 export interface AddSfnAsEventBridgeTargetProps {
   stateMachineObj: StateMachine;
   eventBridgeRuleObj: Rule;
+  jobType?: JobType;
 }
 
 export interface EventBridgeTargetsProps {
