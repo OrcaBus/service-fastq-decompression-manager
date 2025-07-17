@@ -61,7 +61,7 @@ stateful logic to track the decompression progress.
 
 #### Co-dependent services
 
-- [Fastq Unarchiving Service]((https://github.com/OrcaBus/service-fastq-unarchving-manager))
+- [Fastq Unarchiving Service](https://github.com/OrcaBus/service-fastq-unarchiving-manager)
 - [Fastq Sync Service](https://github.com/OrcaBus/service-fastq-sync-manager)
 - [Fastq Manager Service](https://github.com/OrcaBus/service-fastq-manager)
 
