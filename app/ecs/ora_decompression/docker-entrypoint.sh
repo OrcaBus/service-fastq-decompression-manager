@@ -63,7 +63,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 	# If sampling is 1, then seqtk will recognise as the number of reads to return
 	# and then only return only the first read
 	if [[ "${TOTAL_READ_COUNT}" -le "${MAX_READS}" ]]; then
-	  echo "Turning off sampling as total read count is less than the maximum reads"
+	  echo_stderr "Turning off sampling as total read count is less than the maximum reads"
 	  SAMPLING="false"
 	else
 	  SAMPLING_PROPORTION="$( \
