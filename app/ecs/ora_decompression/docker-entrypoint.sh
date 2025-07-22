@@ -6,11 +6,16 @@ set -euo pipefail
 # Set python3 version
 hash -p /usr/bin/python3.12 python3
 
+# Functions
+echo_stderr(){
+  echo "$(date -Iseconds):" "$@" 1>&2
+}
+
 # Globals
 # Inbuilt variables
 # S3_DECOMPRESSION_BUCKET
 if [[ ! -v S3_DECOMPRESSION_BUCKET ]]; then
-  echo "$(date -Iseconds): Error! Expected env var 'S3_DECOMPRESSION_BUCKET' but was not found" 1>&2
+  echo_stderr "Error! Expected env var 'S3_DECOMPRESSION_BUCKET' but was not found"
   exit 1
 fi
 
@@ -21,7 +26,7 @@ RANDOM_SAMPLING_SEED="11"  # Must be a fixed value since we need to ensure R1 an
 
 # Inputs
 if [[ ! -v INPUT_ORA_URI ]]; then
-  echo "$(date -Iseconds): Error! Expected env var 'INPUT_ORA_URI' but was not found" 1>&2
+  echo_stderr "Error! Expected env var 'INPUT_ORA_URI' but was not found"
   exit 1
 fi
 
@@ -30,11 +35,11 @@ export ICAV2_BASE_URL="https://ica.illumina.com/ica/rest"
 
 # SECRET KEY FOR ICAV2
 if [[ ! -v ICAV2_ACCESS_TOKEN_SECRET_ID ]]; then
-  echo "$(date -Iseconds): Error! Expected env var 'ICAV2_ACCESS_TOKEN_SECRET_ID' but was not found" 1>&2
+  echo_stderr "Error! Expected env var 'ICAV2_ACCESS_TOKEN_SECRET_ID' but was not found"
   exit 1
 fi
 
-echo "$(date -Iseconds): Collecting the ICAV2 access token" 1>&2
+echo_stderr "Collecting the ICAV2 access token"
 # Get the ICAV2 access token
 ICAV2_ACCESS_TOKEN="$( \
   aws secretsmanager get-secret-value \
@@ -45,7 +50,7 @@ ICAV2_ACCESS_TOKEN="$( \
 export ICAV2_ACCESS_TOKEN
 
 # Get the presigned url
-echo "$(date -Iseconds): Collecting the presigned URL for the input ora file" 1>&2
+echo_stderr "Collecting the presigned URL for the input ora file"
 presigned_url="$(  \
   python3 scripts/get_icav2_download_url.py \
   "${INPUT_ORA_URI}"
@@ -55,7 +60,13 @@ presigned_url="$(  \
 if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   # Get the sampling parameter
   if [[ "${SAMPLING}" == "true" ]]; then
-    SAMPLING_PROPORTION="$( \
+	# If sampling is 1, then seqtk will recognise as the number of reads to return
+	# and then only return only the first read
+	if [[ "${TOTAL_READ_COUNT}" -le "${MAX_READS}" ]]; then
+	  echo "Turning off sampling as total read count is less than the maximum reads"
+	  SAMPLING="false"
+	else
+	  SAMPLING_PROPORTION="$( \
       jq --null-input --raw-output \
         --argjson maxReads "${MAX_READS}" \
         --argjson totalReadCount "${TOTAL_READ_COUNT}" \
@@ -72,7 +83,8 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 			end
         '
 	  )"
-	echo "Sampling Proportion is ${SAMPLING_PROPORTION}" 1>&2
+	  echo "Sampling Proportion is ${SAMPLING_PROPORTION}"
+	fi
   fi
 
   if [[ "${MAX_READS}" -gt 0 ]]; then
@@ -88,7 +100,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   # Get the icav2 accession credentials if required
   if [[ ! "${OUTPUT_GZIP_URI}" =~ s3://${S3_DECOMPRESSION_BUCKET}/ ]]; then
 	# Set AWS credentials access for aws s3 cp
-  	echo "$(date -Iseconds): Collecting the AWS S3 Access credentials" 1>&2
+  	echo_stderr "Collecting the AWS S3 Access credentials"
   	aws_s3_access_creds_json_str="$( \
 	    python3 scripts/get_icav2_aws_credentials_access.py \
 	      "$(dirname "${OUTPUT_GZIP_URI}")/"
@@ -97,7 +109,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 
   # Use a file descriptor to emulate the ora file
   # Write the gzipped ora file to stdout
-  echo "$(date -Iseconds): Starting stream and decompression of the ora input file" 1>&2
+  echo_stderr "Starting stream and decompression of the ora input file"
   # Prefix with qemu-x86_64-static
   # when using the orad x86_64 binary
   # but we have the arm binary
@@ -187,7 +199,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 		"${OUTPUT_GZIP_URI}"
 	fi
   )
-  echo "$(date -Iseconds): Stream and upload of decompression complete" 1>&2
+  echo_stderr "Stream and upload of decompression complete"
 
   # Write the (linked ora ingest id and output uri location to a file
   jq --null-input --raw-output \
@@ -200,12 +212,12 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   		}
   	' > output.json
 
-  echo "$(date -Iseconds): Uploading metadata" 1>&2
+  echo_stderr "Uploading metadata"
   aws s3 cp \
 	--sse=AES256 \
 	output.json \
 	"${OUTPUT_METADATA_URI}"
-  echo "$(date -Iseconds): Metadata upload complete" 1>&2
+  echo_stderr "Metadata upload complete"
 
   # Remove the output.json file
   rm -f output.json
@@ -213,7 +225,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
   # Download the file and pipe through orad
   # to calculate the gzipped file size
-  echo "$(date -Iseconds): Calculating the gzipped file size" 1>&2
+  echo_stderr "Calculating the gzipped file size"
   gzip_file_size_in_bytes="$( \
     ( \
 	  wget \
@@ -256,7 +268,7 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
 	gzip_file_size_in_bytes="$(( gzip_file_size_in_bytes * TOTAL_READ_COUNT / MAX_READS_IF_TOTAL_READ_COUNT_IS_SET ))"
   fi
 
-  echo "$(date -Iseconds): Gzipped file size is ${gzip_file_size_in_bytes} bytes" 1>&2
+  echo_stderr "Gzipped file size is ${gzip_file_size_in_bytes} bytes"
 
   jq --null-input --raw-output \
     --argjson gzip_file_size_in_bytes "${gzip_file_size_in_bytes}" \
@@ -268,12 +280,12 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
   		}
   	' > output.json
 
-  echo "$(date -Iseconds): Uploading metadata" 1>&2
+  echo_stderr "Uploading metadata"
   aws s3 cp \
 	--sse=AES256 \
 	output.json \
 	"${OUTPUT_METADATA_URI}"
-  echo "$(date -Iseconds): Metadata upload complete" 1>&2
+  echo_stderr "Metadata upload complete"
 
   # Remove the output.json file
   rm -f output.json
@@ -281,7 +293,7 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
 elif [[ "${JOB_TYPE}" == "RAW_MD5SUM_CALCULATION" ]]; then
 
   # Download the file and pipe through orad
-  echo "$(date -Iseconds): Calculating the raw md5sum" 1>&2
+  echo_stderr "Calculating the raw md5sum"
   md5sum_str="$( \
   	wget \
   	  --quiet \
@@ -307,19 +319,19 @@ elif [[ "${JOB_TYPE}" == "RAW_MD5SUM_CALCULATION" ]]; then
   		}
   	' > output.json
 
-  echo "$(date -Iseconds): Uploading metadata" 1>&2
+  echo_stderr "Uploading metadata"
   aws s3 cp \
 	--sse=AES256 \
 	output.json \
 	"${OUTPUT_METADATA_URI}"
-  echo "$(date -Iseconds): Metadata upload complete" 1>&2
+  echo_stderr "Metadata upload complete"
 
   # Remove the output.json file
   rm -f output.json
 
 elif [[ "${JOB_TYPE}" == "READ_COUNT_CALCULATION" ]]; then
   # Download the file and pipe through orad
-  echo "$(date -Iseconds): Calculating the read count" 1>&2
+  echo_stderr "Calculating the read count"
   line_count="$( \
   	wget \
   	  --quiet \
@@ -347,18 +359,18 @@ elif [[ "${JOB_TYPE}" == "READ_COUNT_CALCULATION" ]]; then
   		}
   	' > output.json
 
-  echo "$(date -Iseconds): Uploading metadata" 1>&2
+  echo_stderr "Uploading metadata"
   aws s3 cp \
 	--sse=AES256 \
 	output.json \
 	"${OUTPUT_METADATA_URI}"
-  echo "$(date -Iseconds): Metadata upload complete" 1>&2
+  echo_stderr "Metadata upload complete"
 
   # Remove the output.json file
   rm -f output.json
 
 else
-  echo "$(date -Iseconds): Error! Unknown JOB_TYPE: ${JOB_TYPE}" 1>&2
+  echo_stderr "Error! Unknown JOB_TYPE: ${JOB_TYPE}"
   exit 1
 
 fi
