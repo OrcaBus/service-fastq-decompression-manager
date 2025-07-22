@@ -83,7 +83,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 			end
         '
 	  )"
-	  echo "Sampling Proportion is ${SAMPLING_PROPORTION}"
+	  echo_stderr "Sampling Proportion is ${SAMPLING_PROPORTION}"
 	fi
   fi
 
