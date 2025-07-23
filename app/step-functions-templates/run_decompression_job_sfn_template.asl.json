@@ -229,7 +229,17 @@
                         ]
                       }
                     },
-                    "End": true
+                    "End": true,
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["ECS.AmazonECSException"],
+                        "BackoffRate": 2,
+                        "MaxAttempts": 3,
+                        "Comment": "Capacity error",
+                        "IntervalSeconds": 20,
+                        "JitterStrategy": "FULL"
+                      }
+                    ]
                   }
                 }
               },
@@ -310,7 +320,16 @@
                         ]
                       }
                     },
-                    "End": true
+                    "End": true,
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["ECS.AmazonECSException"],
+                        "BackoffRate": 2,
+                        "IntervalSeconds": 20,
+                        "MaxAttempts": 3,
+                        "JitterStrategy": "FULL"
+                      }
+                    ]
                   },
                   "Pass": {
                     "Type": "Pass",

@@ -114,6 +114,32 @@ export function buildAllEventBridgeTargets(props: EventBridgeTargetsProps): void
         });
         break;
       }
+      case 'newReadCountCalculationJobRequestEventRuleToHandleJobRequest': {
+        buildSfnEventBridgeTarget(<AddSfnAsEventBridgeTargetProps>{
+          eventBridgeRuleObj: props.eventBridgeRuleObjects.find(
+            (eventBridgeObject) =>
+              eventBridgeObject.ruleName === 'newReadCountCalculationJobRequestEventRule'
+          )?.ruleObject,
+          stateMachineObj: props.stepFunctionObjects.find(
+            (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
+          )?.stateMachineObj,
+          jobType: 'READ_COUNT_CALCULATION',
+        });
+        break;
+      }
+      case 'newReadCountCalculationJobRequestSyncEventRuleToHandleJobRequest': {
+        buildSfnEventBridgeTarget(<AddSfnAsEventBridgeTargetProps>{
+          eventBridgeRuleObj: props.eventBridgeRuleObjects.find(
+            (eventBridgeObject) =>
+              eventBridgeObject.ruleName === 'newReadCountCalculationJobRequestSyncEventRule'
+          )?.ruleObject,
+          stateMachineObj: props.stepFunctionObjects.find(
+            (sfnObject) => sfnObject.stateMachineName === 'handleNewJobRequestWithTaskToken'
+          )?.stateMachineObj,
+          jobType: 'READ_COUNT_CALCULATION',
+        });
+        break;
+      }
       case 'heartBeatMonitorSchedulerToMonitorDecompressionJobs': {
         buildSfnEventBridgeTarget(<AddSfnAsEventBridgeTargetProps>{
           eventBridgeRuleObj: props.eventBridgeRuleObjects.find(

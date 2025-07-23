@@ -10,6 +10,8 @@ export type EventTargetsNameList =
   | 'newGzipFileSizeCalculationJobRequestSyncEventRuleToHandleJobRequest'
   | 'newRawMd5sumCalculationJobRequestEventRuleToHandleJobRequest'
   | 'newRawMd5sumCalculationJobRequestSyncEventRuleToHandleJobRequest'
+  | 'newReadCountCalculationJobRequestEventRuleToHandleJobRequest'
+  | 'newReadCountCalculationJobRequestSyncEventRuleToHandleJobRequest'
   | 'heartBeatMonitorSchedulerToMonitorDecompressionJobs'
   | 'decompressionStateChangeToTaskTokenUnlock';
 
@@ -20,6 +22,8 @@ export const eventTargetsNameList: EventTargetsNameList[] = [
   'newGzipFileSizeCalculationJobRequestSyncEventRuleToHandleJobRequest',
   'newRawMd5sumCalculationJobRequestEventRuleToHandleJobRequest',
   'newRawMd5sumCalculationJobRequestSyncEventRuleToHandleJobRequest',
+  'newReadCountCalculationJobRequestEventRuleToHandleJobRequest',
+  'newReadCountCalculationJobRequestSyncEventRuleToHandleJobRequest',
   'heartBeatMonitorSchedulerToMonitorDecompressionJobs',
   'decompressionStateChangeToTaskTokenUnlock',
 ];
