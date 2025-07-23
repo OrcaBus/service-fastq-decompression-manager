@@ -88,6 +88,19 @@ class RawMd5sumCalculationOutputsFastqId(BaseModel):
     raw_md5sum_by_ora_file_ingest_id_list: List[RawMd5sumCalculationOutputsObjectItem]
 
 
+class ReadCountCalculationOutputsFastqId(BaseModel):
+    """
+    The output object for read count calculation
+    """
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True
+    )
+
+    fastq_id: str
+    read_count: int
+
+
 class DecompressionJobOutputObject(BaseModel):
     """
     The output object for decompression jobs, used to store the results of the job
@@ -125,3 +138,16 @@ class RawMd5sumCalculationOutputObject(BaseModel):
 
     # Raw md5sum by ORA file ingest ID list
     raw_md5sum_list: List[RawMd5sumCalculationOutputsFastqId]
+
+
+class ReadCountCalculationOutputObject(BaseModel):
+    """
+    The output object for read count calculation
+    """
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True
+    )
+
+    # Raw md5sum by ORA file ingest ID list
+    read_count_list: List[ReadCountCalculationOutputsFastqId]

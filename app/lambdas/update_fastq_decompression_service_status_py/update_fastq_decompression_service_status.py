@@ -136,7 +136,7 @@ def handler(event, context):
                                     metadata_json_fastq_pair_dicts_iter_['fastqId'] == fastq_iter_
                             ),
                             metadata_json_fastq_pair_dicts_list
-                        ))['metadataJson']
+                        ))['metadataJson'][0]['readCount']
                     },
                     fastq_id_list
                 ))

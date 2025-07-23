@@ -21,6 +21,7 @@ from . import (
     DecompressionJobOutputObject,
     GzipFileSizeCalculationOutputObject,
     RawMd5sumCalculationOutputObject,
+    ReadCountCalculationOutputObject
 )
 
 # Util imports
@@ -80,7 +81,8 @@ class JobWithId(JobBase, JobOrcabusId):
     output: Optional[Union[
         DecompressionJobOutputObject |
         GzipFileSizeCalculationOutputObject |
-        RawMd5sumCalculationOutputObject
+        RawMd5sumCalculationOutputObject |
+        ReadCountCalculationOutputObject
     ]] = None
 
 
@@ -132,7 +134,8 @@ class JobPatch(BaseModel):
     output: Optional[Union[
         DecompressionJobOutputObject,
         GzipFileSizeCalculationOutputObject,
-        RawMd5sumCalculationOutputObject
+        RawMd5sumCalculationOutputObject,
+        ReadCountCalculationOutputObject
     ]] = None
 
 
