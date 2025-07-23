@@ -142,7 +142,7 @@ class RawMd5sumCalculationOutputObject(BaseModel):
 
 class ReadCountCalculationOutputObject(BaseModel):
     """
-    The output object for raw md5sum calculation
+    The output object for read count calculation
     """
     model_config = ConfigDict(
         alias_generator=to_camel,
