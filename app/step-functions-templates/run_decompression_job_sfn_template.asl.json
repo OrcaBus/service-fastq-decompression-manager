@@ -16,6 +16,7 @@
         "fastqIdList": "{% $states.input.fastqIdList ? $states.input.fastqIdList : null %}",
         "maxReads": "{% $states.input.maxReads ? $states.input.maxReads : -1 %}",
         "sampling": "{% $states.input.sampling ? $states.input.sampling : false %}",
+        "noSplitByLane": "{% $states.input.noSplitByLane ? $states.input.noSplitByLane : false %}",
         "s3JobMetadataBucket": "{% $states.input.s3JobMetadataBucket %}",
         "s3JobMetadataPrefix": "{% $states.input.s3JobMetadataPrefix %}",
         "outputUriPrefix": "{% $states.input.outputUriPrefix %}"
@@ -131,13 +132,14 @@
             "Type": "Task",
             "Resource": "arn:aws:states:::lambda:invoke",
             "Arguments": {
-              "FunctionName": "${__get_fastq_list_row_object_lambda_function_arn__}",
+              "FunctionName": "${__get_fastq_object_lambda_function_arn__}",
               "Payload": {
                 "fastqId": "{% $fastqIdListIter %}",
                 "outputUriPrefix": "{% $outputUriPrefix %}",
                 "metadataBucket": "{% $s3JobMetadataBucket %}",
                 "metadataPathPrefix": "{% $s3JobMetadataPrefix %}",
-                "maxReads": "{% $maxReads %}"
+                "maxReads": "{% $maxReads %}",
+                "noSplitByLane": "{% $noSplitByLane %}"
               }
             },
             "Retry": [

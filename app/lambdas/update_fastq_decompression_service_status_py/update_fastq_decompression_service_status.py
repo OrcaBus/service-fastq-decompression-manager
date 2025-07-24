@@ -7,7 +7,6 @@ from typing import Literal, Dict, Union, List
 
 from orcabus_api_tools.fastq.models import FastqListRow
 from orcabus_api_tools.fastq_decompression import update_status
-from orcabus_api_tools.fastq import get_fastq
 
 JobType = Literal[
     'ORA_DECOMPRESSION',

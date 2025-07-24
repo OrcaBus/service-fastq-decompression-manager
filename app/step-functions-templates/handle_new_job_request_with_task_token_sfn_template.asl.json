@@ -24,7 +24,8 @@
           "outputUriPrefix": "{% $payload.outputUriPrefix ? $payload.outputUriPrefix : null %}",
           "jobType": "{% $jobType %}",
           "maxReads": "{% $payload.maxReads ? $payload.maxReads : null %}",
-          "sampling": "{% $payload.sampling ? $payload.sampling : null %}"
+          "sampling": "{% $payload.sampling ? $payload.sampling : null %}",
+          "noSplitbyLane": "{% $payload.noSplitbyLane ? $payload.noSplitbyLane : null %}"
         }
       },
       "Retry": [
