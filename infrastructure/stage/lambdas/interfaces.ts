@@ -11,7 +11,7 @@ export type LambdaNameList =
   // Run Decompression Job lambdas
   | 'updateFastqDecompressionServiceStatus'
   | 'getFastqSetIdListFromFastqIdList'
-  | 'getFastqListRowObject';
+  | 'getFastqObject';
 
 export const lambdaNameList: LambdaNameList[] = [
   // Event Handler
@@ -21,7 +21,7 @@ export const lambdaNameList: LambdaNameList[] = [
   // Run Decompression Job lambdas
   'updateFastqDecompressionServiceStatus',
   'getFastqSetIdListFromFastqIdList',
-  'getFastqListRowObject',
+  'getFastqObject',
 ];
 
 export interface LambdaRequirementsProps {
@@ -29,7 +29,7 @@ export interface LambdaRequirementsProps {
 }
 
 export const lambdaRequirementsMap: Record<LambdaNameList, LambdaRequirementsProps> = {
-  getFastqListRowObject: {
+  getFastqObject: {
     needsOrcabusApiTools: true,
   },
   launchDecompressionJob: {

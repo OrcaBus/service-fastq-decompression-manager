@@ -36,10 +36,12 @@ DYNAMODB_HOST_ENV_VAR = "DYNAMODB_HOST"
 # SFN Env vars
 DECOMPRESSION_JOB_STATE_MACHINE_ARN_ENV_VAR = "DECOMPRESSION_JOB_STATE_MACHINE_ARN"
 
-
 # Event enums
 class JobEventDetailTypeEnum(Enum):
     STATE_CHANGE = environ[EVENT_DETAIL_TYPE_JOB_STATE_CHANGE_ENV_VAR]
+
+
+
 
 
 def get_default_job_patch_entry() -> 'JobPatch':
