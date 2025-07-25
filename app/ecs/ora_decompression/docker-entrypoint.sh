@@ -52,7 +52,7 @@ export ICAV2_ACCESS_TOKEN
 # Get the presigned url
 echo_stderr "Collecting the presigned URL for the input ora file"
 presigned_url="$(  \
-  python3 scripts/get_icav2_download_url.py \
+  uv run python3 scripts/get_icav2_download_url.py \
   "${INPUT_ORA_URI}"
 )"
 
@@ -102,7 +102,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 	# Set AWS credentials access for aws s3 cp
   	echo_stderr "Collecting the AWS S3 Access credentials"
   	aws_s3_access_creds_json_str="$( \
-	    python3 scripts/get_icav2_aws_credentials_access.py \
+	    uv run python3 scripts/get_icav2_aws_credentials_access.py \
 	      "$(dirname "${OUTPUT_GZIP_URI}")/"
   	)";
   fi
@@ -186,7 +186,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 		--sse=AES256 \
 		- \
 		"$( \
-		  python3 scripts/get_s3_uri.py \
+		  uv run python3 scripts/get_s3_uri.py \
 			"$(dirname "${OUTPUT_GZIP_URI}")/" \
 		)$( \
 		  basename "${OUTPUT_GZIP_URI}" \
