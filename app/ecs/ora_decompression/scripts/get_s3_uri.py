@@ -4,12 +4,12 @@
 import sys
 
 # Wrapica imports
-from wrapica.enums import UriType
 from wrapica.project_data import (
     ProjectData,
     convert_uri_to_project_data_obj,
     convert_project_data_obj_to_uri
 )
+from wrapica.utils.globals import S3_URI_SCHEME
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
     print(
         convert_project_data_obj_to_uri(
             project_data_obj,
-            uri_type=UriType.S3
+            uri_type=S3_URI_SCHEME
         )
     )
 
