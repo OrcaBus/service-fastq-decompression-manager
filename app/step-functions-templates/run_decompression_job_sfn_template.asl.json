@@ -236,7 +236,7 @@
                       {
                         "ErrorEquals": ["ECS.AmazonECSException"],
                         "BackoffRate": 2,
-                        "MaxAttempts": 3,
+                        "MaxAttempts": 5,
                         "Comment": "Capacity error",
                         "IntervalSeconds": 20,
                         "JitterStrategy": "FULL"
@@ -328,7 +328,7 @@
                         "ErrorEquals": ["ECS.AmazonECSException"],
                         "BackoffRate": 2,
                         "IntervalSeconds": 20,
-                        "MaxAttempts": 3,
+                        "MaxAttempts": 5,
                         "JitterStrategy": "FULL"
                       }
                     ]
