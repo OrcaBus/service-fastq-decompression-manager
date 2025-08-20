@@ -155,6 +155,29 @@
               "TaskToken": "{% $taskToken %}"
             },
             "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskHeartbeat",
+            "End": true,
+            "Catch": [
+              {
+                "ErrorEquals": ["Sfn.TaskTimedOutException"],
+                "Next": "Delete job",
+                "Comment": "Token does not exist"
+              }
+            ]
+          },
+          "Delete job": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:deleteItem",
+            "Arguments": {
+              "TableName": "${__task_token_table_name__}",
+              "Key": {
+                "id": {
+                  "S": "{% $jobId %}"
+                },
+                "id_type": {
+                  "S": "${__job_id_type__}"
+                }
+              }
+            },
             "End": true
           },
           "Pass": {
