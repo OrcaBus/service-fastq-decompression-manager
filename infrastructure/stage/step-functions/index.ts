@@ -127,7 +127,22 @@ function wireUpStateMachinePermissions(props: SfnObject): void {
   }
 
   if (sfnRequirements.needsEcsPermissions) {
+    /*
+    Grant permissions to run the ECS task
+    */
     props.fargateDecompressionTask.taskDefinition.grantRun(props.stateMachineObj);
+
+    /*
+    Add in the permissions to allow the state machine to stop the tasks if necessary
+    */
+    props.stateMachineObj.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ecs:DescribeTasks', 'ecs:StopTask'],
+        resources: [
+          '*', // We need to allow stopping any task in the cluster
+        ],
+      })
+    );
 
     /* Grant the state machine access to monitor the tasks */
     props.stateMachineObj.addToRolePolicy(
