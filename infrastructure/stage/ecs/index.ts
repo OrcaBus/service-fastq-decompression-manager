@@ -42,6 +42,27 @@ export function buildDecompressionFargateTask(
     runtimePlatform: CPU_ARCHITECTURE_MAP['ARM64'],
   });
 
+  // Also need the hostname ssm parameter name and the orcabus access token secret objects
+  props.hostnameSsmParameterObj.grantRead(ecsTask.taskDefinition.taskRole);
+  ecsTask.containerDefinition.addEnvironment(
+    'HOSTNAME_SSM_PARAMETER_NAME',
+    props.hostnameSsmParameterObj.parameterName
+  );
+  props.orcabusAccessTokenSecretObj.grantRead(ecsTask.taskDefinition.taskRole);
+  ecsTask.containerDefinition.addEnvironment(
+    'ORCABUS_TOKEN_SECRET_ID',
+    props.orcabusAccessTokenSecretObj.secretName
+  );
+
+  // Needs access to the icav2 access token secret
+  // For uploading back to a cache location to run an ICAv2 Analysis
+  props.icav2AccessTokenSecretObj.grantRead(ecsTask.taskDefinition.taskRole);
+  ecsTask.containerDefinition.addEnvironment(
+    'ICAV2_ACCESS_TOKEN_SECRET_ID',
+    props.icav2AccessTokenSecretObj.secretName
+  );
+  ecsTask.containerDefinition.addEnvironment('ICAV2_BASE_URL', ICAV2_BASE_URL);
+
   // Give the ecsTask access to the S3 bucket
   // Must be able to write to both the decompression and metadata prefixes
   props.fastqDecompressionS3Bucket.grantReadWrite(
@@ -53,9 +74,7 @@ export function buildDecompressionFargateTask(
     `${S3_DEFAULT_METADATA_PREFIX}*`
   );
 
-  // Needs access to the secrets manager
-  props.icav2AccessTokenSecretObj.grantRead(ecsTask.taskDefinition.taskRole);
-
+  // Add the S3 bucket name to the task environment variables
   // Add constant environment variables to the task
   ecsTask.containerDefinition.addEnvironment(
     'S3_DECOMPRESSION_BUCKET',
@@ -66,11 +85,6 @@ export function buildDecompressionFargateTask(
     S3_DEFAULT_DECOMPRESSION_PREFIX
   );
   ecsTask.containerDefinition.addEnvironment('S3_METADATA_PREFIX', S3_DEFAULT_METADATA_PREFIX);
-  ecsTask.containerDefinition.addEnvironment(
-    'ICAV2_ACCESS_TOKEN_SECRET_ID',
-    props.icav2AccessTokenSecretObj.secretName
-  );
-  ecsTask.containerDefinition.addEnvironment('ICAV2_BASE_URL', ICAV2_BASE_URL);
 
   // Add suppressions for the task role
   // Since the task role needs to access the S3 bucket prefix

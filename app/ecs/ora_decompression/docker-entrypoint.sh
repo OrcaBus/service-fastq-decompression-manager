@@ -19,6 +19,35 @@ if [[ ! -v S3_DECOMPRESSION_BUCKET ]]; then
   exit 1
 fi
 
+if [[ ! -v HOSTNAME_SSM_PARAMETER_NAME ]]; then
+  echo_stderr "Error! Expected env var 'HOSTNAME_SSM_PARAMETER_NAME' but was not found"
+  exit 1
+fi
+
+if [[ ! -v ORCABUS_TOKEN_SECRET_ID ]]; then
+  echo_stderr "Error! Expected env var ORCABUS_TOKEN_SECRET_ID but was not found"
+  exit 1
+fi
+
+# Get the hostname ssm parameter
+HOSTNAME="$( \
+  aws ssm get-parameter \
+    --name "${HOSTNAME_SSM_PARAMETER_NAME}" \
+    --query Parameter.Value \
+    --output text \
+)"
+export HOSTNAME
+
+# Get the orcabus token secret id
+ORCABUS_TOKEN="$( \
+  aws secretsmanager get-secret-value \
+    --secret-id "${ORCABUS_TOKEN_SECRET_ID}" \
+    --output json \
+    --query SecretString | \
+  jq --raw-output 'fromjson | .id_token'
+)"
+export ORCABUS_TOKEN
+
 # Parameter to help calculate the gzipped file size
 # without needing to decompress the entire file
 MAX_READS_IF_TOTAL_READ_COUNT_IS_SET="10000000"  # 10 million reads
@@ -49,11 +78,42 @@ ICAV2_ACCESS_TOKEN="$( \
 )"
 export ICAV2_ACCESS_TOKEN
 
+# Get the bucket from the input ora uri
+ora_bucket="$( \
+  uv run python3 -c "from urllib.parse import urlparse; print(urlparse(\"${INPUT_ORA_URI}\").netloc)"
+)"
+ora_key="$( \
+  uv run python3 -c "from urllib.parse import urlparse; print(urlparse(\"${INPUT_ORA_URI}\").path.lstrip(\"/\"))"
+)"
+s3_object_id="$( \
+	curl \
+	  --request GET \
+	  --fail --silent --location --show-error \
+	  --header "Accept: application/json " \
+	  --header "Authorization: Bearer ${ORCABUS_TOKEN}" \
+	  --url "https://file.${HOSTNAME}/api/v1/s3?bucket=${ora_bucket}&key=${ora_key}&currentState=true" | \
+	jq --raw-output \
+      '
+        if .results | length == 0 then
+		  error("No results found for the given bucket and key")
+		elif .results | length > 1 then
+		  error("Multiple results found for the given bucket and key")
+		else
+		  .results[0].s3ObjectId
+		end
+      '
+)"
+
 # Get the presigned url
 echo_stderr "Collecting the presigned URL for the input ora file"
 presigned_url="$(  \
-  uv run python3 scripts/get_icav2_download_url.py \
-  "${INPUT_ORA_URI}"
+	curl \
+	  --request GET \
+	  --fail --silent --location --show-error \
+	  --header "Accept: application/json " \
+	  --header "Authorization: Bearer ${ORCABUS_TOKEN}" \
+	  --url "https://file.${HOSTNAME}/api/v1/s3/presign/${s3_object_id}" | \
+	jq --raw-output
 )"
 
 # Download + Upload the ora file as a gzipped compressed file
