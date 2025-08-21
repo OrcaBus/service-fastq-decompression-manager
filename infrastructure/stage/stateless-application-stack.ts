@@ -20,6 +20,7 @@ import { buildEventBridgeRules } from './event-rules';
 import { buildAllEventBridgeTargets } from './event-targets';
 import { ICAV2_ACCESS_TOKEN_SECRET_ID } from '@orcabus/platform-cdk-constructs/shared-config/icav2';
 import { HOSTED_ZONE_DOMAIN_PARAMETER_NAME } from '@orcabus/platform-cdk-constructs/api-gateway';
+import { DEFAULT_ORCABUS_TOKEN_SECRET_ID } from '@orcabus/platform-cdk-constructs/lambda/config';
 
 type StatelessApplicationStackProps = StatelessApplicationStackConfig & cdk.StackProps;
 
@@ -64,12 +65,21 @@ export class StatelessApplicationStack extends cdk.Stack {
       HOSTED_ZONE_DOMAIN_PARAMETER_NAME
     );
 
+    // Get orcabus token
+    const orcabusTokenSecretObj = secretsManager.Secret.fromSecretNameV2(
+      this,
+      'orcabusTokenSecret',
+      DEFAULT_ORCABUS_TOKEN_SECRET_ID
+    );
+
     // Part 1 - Build Lambdas
     const lambdaObjects = buildLambdaFunctions(this);
 
     // Part 2 - Build ECS Tasks / Fargate Clusters
     const fargateDecompressionTaskObj = buildDecompressionFargateTask(this, {
       icav2AccessTokenSecretObj: icav2AccessTokenSecretObj,
+      hostnameSsmParameterObj: hostedZoneNameSsmParameter,
+      orcabusAccessTokenSecretObj: orcabusTokenSecretObj,
       fastqDecompressionS3Bucket: s3Bucket,
     });
 
