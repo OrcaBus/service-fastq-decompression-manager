@@ -127,32 +127,28 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   # 6a. If the output gzip uri is not in the S3_DECOMPRESSION_BUCKET, upload to S3 using aws s3 cp icav2 credentials
   # 6b. If the output gzip uri is in the S3_DECOMPRESSION_BUCKET, upload to S3 using aws s3 cp with task role credentials
   ( \
-  	wget \
-  	  --quiet \
-  	  --output-document /dev/stdout \
-  	  "${presigned_url}" || \
-  	true
-  ) | \
-  (
-  	/usr/local/bin/orad \
-  	  --raw \
-  	  --stdout \
-  	  --ora-reference "${ORADATA_PATH}" \
-  	  - || \
-  	true
-  ) | \
-  (
-  	(
-	  if [[ "${SAMPLING}" == "true" ]]; then
-		seqtk sample \
-		  -s "${RANDOM_SAMPLING_SEED}" \
-		  - \
-		  "${SAMPLING_PROPORTION}"
-	  else
-		cat
-	  fi
+    (
+	  wget \
+		--quiet \
+		--output-document /dev/stdout \
+		"${presigned_url}" | \
+	  /usr/local/bin/orad \
+		--raw \
+		--stdout \
+		--ora-reference "${ORADATA_PATH}" \
+		- | \
+	  (
+		if [[ "${SAMPLING}" == "true" ]]; then
+		  seqtk sample \
+			-s "${RANDOM_SAMPLING_SEED}" \
+			- \
+			"${SAMPLING_PROPORTION}"
+		else
+		  cat
+		fi
+	  ) \
 	) || \
-	  true
+	true
   ) | \
   (
   	if [[ "${MAX_READS}" -gt 0 ]]; then

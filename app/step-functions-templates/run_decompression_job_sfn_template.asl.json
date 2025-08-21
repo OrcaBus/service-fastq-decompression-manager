@@ -240,8 +240,16 @@
                         "Comment": "Capacity error",
                         "IntervalSeconds": 20,
                         "JitterStrategy": "FULL"
+                      },
+                      {
+                        "ErrorEquals": ["States.Timeout"],
+                        "BackoffRate": 2,
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "Comment": "Timeout"
                       }
-                    ]
+                    ],
+                    "TimeoutSeconds": 3600
                   }
                 }
               },
@@ -330,8 +338,16 @@
                         "IntervalSeconds": 20,
                         "MaxAttempts": 5,
                         "JitterStrategy": "FULL"
+                      },
+                      {
+                        "ErrorEquals": ["States.Timeout"],
+                        "BackoffRate": 2,
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "Comment": "Timeout"
                       }
-                    ]
+                    ],
+                    "TimeoutSeconds": 3600
                   },
                   "Pass": {
                     "Type": "Pass",
