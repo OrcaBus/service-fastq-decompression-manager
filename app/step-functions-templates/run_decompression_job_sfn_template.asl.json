@@ -83,7 +83,7 @@
           "Condition": "{% ( \n $jobType = 'ORA_DECOMPRESSION' and\n ( \n   $maxReads = -1 or\n   $maxReads > ${__min_reads_to_require_gzip_stats__}\n )\n) %}"
         },
         {
-          "Next": "Needs Read Count",
+          "Next": "Fastq sync (Needs Read Count)",
           "Condition": "{% $jobType = 'GZIP_FILESIZE_CALCULATION' or $sampling %}",
           "Comment": "Is Gzip Filesize Calculation Job Or Sampling Required"
         }
@@ -111,7 +111,16 @@
           }
         ]
       },
-      "Next": "For each fastq pair"
+      "Next": "For each fastq pair",
+      "HeartbeatSeconds": 3600,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.HeartbeatTimeout"],
+          "BackoffRate": 2,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 1
+        }
+      ]
     },
     "For each fastq pair": {
       "Type": "Map",
@@ -477,7 +486,7 @@
       ],
       "End": true
     },
-    "Needs Read Count": {
+    "Fastq sync (Needs Read Count)": {
       "Type": "Task",
       "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
       "Arguments": {
@@ -498,7 +507,16 @@
           }
         ]
       },
-      "Next": "For each fastq pair"
+      "Next": "For each fastq pair",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.HeartbeatTimeout"],
+          "BackoffRate": 2,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 1
+        }
+      ],
+      "HeartbeatSeconds": 3600
     }
   },
   "QueryLanguage": "JSONata"
