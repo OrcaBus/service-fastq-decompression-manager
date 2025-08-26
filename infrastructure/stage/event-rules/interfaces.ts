@@ -5,7 +5,7 @@ import { IEventBus, Rule } from 'aws-cdk-lib/aws-events';
 import { Duration } from 'aws-cdk-lib';
 import { HEART_BEAT_SCHEDULER_RULE_NAME } from '../constants';
 
-export type EventRuleNamesList =
+export type EventRuleName =
   // External request event rules
   | 'newDecompressionJobRequestEventRule'
   | 'newDecompressionJobRequestSyncEventRule'
@@ -16,11 +16,11 @@ export type EventRuleNamesList =
   | 'newReadCountCalculationJobRequestEventRule'
   | 'newReadCountCalculationJobRequestSyncEventRule'
   // Internal Heartbeat
-  | 'heartbeatDecompressionJobsScheduler' // HEART_BEAT_SCHEDULER_RULE_NAME
+  | typeof HEART_BEAT_SCHEDULER_RULE_NAME
   // Decompression state change event rule (for sync monitor)
   | 'decompressionStateChangeEventRule';
 
-export const eventRuleNamesList: EventRuleNamesList[] = [
+export const eventRuleNamesList: EventRuleName[] = [
   'newDecompressionJobRequestEventRule',
   'newDecompressionJobRequestSyncEventRule',
   'newGzipFileSizeCalculationJobRequestEventRule',
@@ -34,7 +34,7 @@ export const eventRuleNamesList: EventRuleNamesList[] = [
 ];
 
 export interface EventBridgeRuleProps {
-  ruleName: EventRuleNamesList;
+  ruleName: EventRuleName;
   eventBus: IEventBus;
 }
 
@@ -47,6 +47,6 @@ export interface EventBridgeRulesProps {
 }
 
 export interface EventBridgeRuleObject {
-  ruleName: EventRuleNamesList;
+  ruleName: EventRuleName;
   ruleObject: Rule;
 }
