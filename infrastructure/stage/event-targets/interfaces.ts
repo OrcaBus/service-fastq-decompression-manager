@@ -3,7 +3,7 @@ import { Rule } from 'aws-cdk-lib/aws-events';
 import { EventBridgeRuleObject } from '../event-rules/interfaces';
 import { SfnObject } from '../step-functions/interfaces';
 
-export type EventTargetsNameList =
+export type EventTargetsName =
   | 'newDecompressionJobRequestEventRuleToHandleJobRequest'
   | 'newDecompressionJobRequestSyncEventRuleToHandleJobRequest'
   | 'newGzipFileSizeCalculationJobRequestEventRuleToHandleJobRequest'
@@ -15,7 +15,7 @@ export type EventTargetsNameList =
   | 'heartBeatMonitorSchedulerToMonitorDecompressionJobs'
   | 'decompressionStateChangeToTaskTokenUnlock';
 
-export const eventTargetsNameList: EventTargetsNameList[] = [
+export const eventTargetsNameList: EventTargetsName[] = [
   'newDecompressionJobRequestEventRuleToHandleJobRequest',
   'newDecompressionJobRequestSyncEventRuleToHandleJobRequest',
   'newGzipFileSizeCalculationJobRequestEventRuleToHandleJobRequest',
@@ -33,13 +33,6 @@ export type JobType =
   | 'GZIP_FILESIZE_CALCULATION'
   | 'RAW_MD5SUM_CALCULATION'
   | 'READ_COUNT_CALCULATION';
-
-export const jobTypeList: JobType[] = [
-  'ORA_DECOMPRESSION',
-  'GZIP_FILESIZE_CALCULATION',
-  'RAW_MD5SUM_CALCULATION',
-  'READ_COUNT_CALCULATION',
-];
 
 export interface AddSfnAsEventBridgeTargetProps {
   stateMachineObj: StateMachine;

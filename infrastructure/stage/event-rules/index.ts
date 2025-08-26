@@ -90,6 +90,7 @@ function buildNewReadCountFileSizeCalculationJobSyncRequestEventPattern(): Event
 function buildNewReadCountFileSizeCalculationJobAsyncRequestEventPattern(): EventPattern {
   return createNewEventAsyncEventPattern(EVENT_DETAIL_TYPE_MAP['READ_COUNT_CALCULATION_ASYNC']);
 }
+
 /* Heartbeat scheduler */
 function buildHeartBeatEventBridgeRule(
   scope: Construct,
