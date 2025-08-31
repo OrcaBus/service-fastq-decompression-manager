@@ -264,12 +264,7 @@
                         "MaxAttempts": 2
                       }
                     ],
-                    "TimeoutSeconds": 3600,
-                    "Catch": [
-                      {
-                        "ErrorEquals": []
-                      }
-                    ]
+                    "TimeoutSeconds": 3600
                   }
                 }
               },
