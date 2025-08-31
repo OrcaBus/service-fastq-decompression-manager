@@ -256,6 +256,12 @@
                         "IntervalSeconds": 1,
                         "MaxAttempts": 3,
                         "Comment": "Timeout"
+                      },
+                      {
+                        "ErrorEquals": ["States.TaskFailed"],
+                        "BackoffRate": 2,
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 2
                       }
                     ],
                     "TimeoutSeconds": 3600
@@ -354,6 +360,12 @@
                         "IntervalSeconds": 1,
                         "MaxAttempts": 3,
                         "Comment": "Timeout"
+                      },
+                      {
+                        "ErrorEquals": ["States.TaskFailed"],
+                        "BackoffRate": 2,
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 2
                       }
                     ],
                     "TimeoutSeconds": 3600
