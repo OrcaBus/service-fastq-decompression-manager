@@ -120,41 +120,70 @@ presigned_url="$(  \
 if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   # Get the sampling parameter
   if [[ "${SAMPLING}" == "true" ]]; then
-  # If sampling is 1, then seqtk will recognise as the number of reads to return
-  # and then only return only the first read
-  if [[ "${TOTAL_READ_COUNT}" -le "${MAX_READS}" ]]; then
-    echo_stderr "Turning off sampling as total read count is less than the maximum reads"
-    SAMPLING="false"
-  else
-    SAMPLING_PROPORTION="$( \
-      jq --null-input --raw-output \
-        --argjson maxReads "${MAX_READS}" \
-        --argjson totalReadCount "${TOTAL_READ_COUNT}" \
-        '
-          if $maxReads > $totalReadCount then
-            1.0
-          else
-            # Calculate the sampling proportion as a percentage
-            # This is the maximum reads divided by the total read count
-            # rounded to 2 decimal places
-            (
-               (( 100 * $maxReads) / $totalReadCount ) | round
-            ) / 100
-          end
-        '
-    )"
-    echo_stderr "Sampling Proportion is ${SAMPLING_PROPORTION}"
-  fi
+	# If sampling is 1, then seqtk will recognise as the number of reads to return
+	# and then only return only the first read
+	if [[ "${TOTAL_READ_COUNT}" -le "${MAX_READS}" ]]; then
+	  echo_stderr "Turning off sampling as total read count is less than the maximum reads"
+	  SAMPLING="false"
+	else
+	  SAMPLING_PROPORTION="$( \
+		jq --null-input --raw-output \
+		  --argjson maxReads "${MAX_READS}" \
+		  --argjson totalReadCount "${TOTAL_READ_COUNT}" \
+		  '
+			if $maxReads > $totalReadCount then
+			  1.0
+			else
+			  # Calculate the sampling proportion as a percentage
+			  # This is the maximum reads divided by the total read count
+			  # rounded to 2 decimal places
+			  (
+				 (( 100 * $maxReads) / $totalReadCount ) | round
+			  ) / 100
+			end
+		  '
+	  )"
+	  echo_stderr "Sampling Proportion is ${SAMPLING_PROPORTION}"
+	fi
   fi
 
-  if [[ "${MAX_READS}" -gt 0 ]]; then
-  line_count="$( \
-    jq --null-input --raw-output \
-      --argjson maxReads "${MAX_READS}" \
-      '
-        $maxReads * 4
-      ' \
-  )"
+  # Get the linecount parameter
+  if [[ "${MAX_READS}" -gt "0" ]]; then
+	line_count="$( \
+	  jq --null-input --raw-output \
+		--argjson maxReads "${MAX_READS}" \
+		'
+		  $maxReads * 4
+		' \
+	)"
+  fi
+
+  # Check if GZIP_COMPRESSION_SIZE_IN_BYTES is set
+  if [[ "${GZIP_COMPRESSION_SIZE_IN_BYTES}" -eq "-1" ]]; then
+    # GZIP COMPRESSION SIZE IN BYTES is not set, we must
+    # Use a quick 'rule-of-thumb' to calculate this value.
+    # Where we expect 1 Kb per read (compressed)
+    # Note that this is only applicable to short read data and
+    # We should consider using the baseCountEst / totalReadCount
+    # To help collect this 100 bytes per read
+    # The estimated file size does not need to be perfect but
+    # must be set over the value of 5 Gb, contrary to the documentation
+    # Which expects it to be set when used over the value of 50 Gb
+    GZIP_COMPRESSION_SIZE_IN_BYTES="$(
+		jq --raw-output --null-input \
+		  --argjson maxReads "${MAX_READS}" \
+		  --argjson totalReadCount "${TOTAL_READ_COUNT}" \
+		  '
+		    # If maxReads is not zero.
+		    # Use this value multiplied by 1024
+		    if $maxReads > 0 then
+		      $maxReads * 1024
+		    else
+		      $totalReadCount * 1024
+		    end
+		  '
+    )"
+    echo_stderr "Calculated the estimated gzip compression size in bytes as ${GZIP_COMPRESSION_SIZE_IN_BYTES}"
   fi
 
   # Get the icav2 accession credentials if required
@@ -211,17 +240,17 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
     true
   ) | \
   (
-    if [[ "${MAX_READS}" -gt 0 ]]; then
-    head -n "${line_count}"
-  else
-    cat
-  fi
+    if [[ "${MAX_READS}" -gt "0" ]]; then
+      head -n "${line_count}"
+	else
+	  cat
+	fi
   ) | \
   (
     pigz \
-    --stdout \
-    --fast \
-    --processes 4
+      --stdout \
+      --fast \
+      --processes 4
   ) | \
   (
     if [[ ! "${OUTPUT_GZIP_URI}" =~ s3://${S3_DECOMPRESSION_BUCKET}/ ]]; then
@@ -292,10 +321,10 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
     ) | \
     (
       /usr/local/bin/orad \
-      --raw \
-      --stdout \
-      --ora-reference "${ORADATA_PATH}" \
-      - || \
+        --raw \
+        --stdout \
+        --ora-reference "${ORADATA_PATH}" \
+        - || \
       true
     ) | \
     (
@@ -312,8 +341,8 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
     ) | \
     (
       pigz \
-      --stdout \
-      --fast
+        --stdout \
+        --fast
     ) | \
     wc -c
   )"
