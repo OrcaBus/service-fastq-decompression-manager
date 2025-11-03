@@ -6,18 +6,18 @@ import { Duration } from 'aws-cdk-lib';
 
 function addDecompressionDataLifeCycleRuleToBucket(bucket: Bucket): void {
   bucket.addLifecycleRule({
-    id: 'DeleteDecompressionDataAfterOneDay',
+    id: 'DeleteDecompressionData',
     enabled: true,
-    expiration: Duration.days(1), // Delete objects older than 1 day
+    expiration: Duration.hours(6), // Delete objects older than six hours
     prefix: S3_DEFAULT_DECOMPRESSION_PREFIX, // Apply to objects with the 'decompression-data/' prefix
   });
 }
 
 function addMetadataLifeCycleRuleToBucket(bucket: Bucket): void {
   bucket.addLifecycleRule({
-    id: 'DeleteMetadataJsonsAfterOneMonth',
+    id: 'DeleteMetadataJsons',
     enabled: true,
-    expiration: Duration.days(30), // Delete objects older than 1 day
+    expiration: Duration.days(30), // Delete objects older than one month
     prefix: S3_DEFAULT_METADATA_PREFIX, // Apply to objects with the 'metadata/' prefix
   });
 }
