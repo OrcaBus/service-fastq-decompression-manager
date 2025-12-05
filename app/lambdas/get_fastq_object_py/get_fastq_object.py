@@ -5,10 +5,15 @@ Get the fastq list row object and then return the gzip file compression size in 
 for both read1 and read2
 """
 
-from orcabus_api_tools.fastq import get_fastq
-from orcabus_api_tools.fastq.models import Fastq
+# Standard imports
 import re
 
+# Layer imports
+from orcabus_api_tools.fastq import get_fastq
+from orcabus_api_tools.fastq.models import Fastq
+
+# Globals
+EMPTY_GZIP_FASTQ_SIZE_BYTES = 28
 
 def get_sample_number_from_fastq_uri(fastq_uri: str) -> int:
     try:
@@ -38,6 +43,10 @@ def get_gzip_file_size_in_bytes(fastq_obj: Fastq, read_num: str, max_reads: int)
     # So again return -1
     if fastq_obj.get('readCount', None) is None:
         return -1
+
+    # If the readCount is zero, then our expected size is of an empty gzipped FASTQ file (28 bytes),
+    if fastq_obj['readCount'] == 0:
+        return EMPTY_GZIP_FASTQ_SIZE_BYTES
 
     # Otherwise return the gzipCompressionSizeInBytes proportional to the read count we're after
     return (
