@@ -6,7 +6,7 @@ import {
   REGION,
   StageName,
 } from '@orcabus/platform-cdk-constructs/shared-config/accounts';
-import { EVENT_SCHEMA_REGISTRY_NAME as ORCABUS_EVENT_SCHEMA_REGISTRY_NAME } from '@orcabus/platform-cdk-constructs/shared-config/event-bridge';
+import { EVENT_SCHEMA_REGISTRY_NAME } from '@orcabus/platform-cdk-constructs/shared-config/event-bridge';
 
 // Stack constants
 export const STACK_PREFIX = 'fastq-deora';
@@ -46,7 +46,9 @@ export const SSM_PARAMETER_PATH_PREFIX = path.join(`/orcabus/services/${STACK_PR
 // Event rule constants
 export const HEART_BEAT_SCHEDULER_RULE_NAME = 'heartbeatDecompressionJobsScheduler';
 export const DEFAULT_HEART_BEAT_INTERVAL = Duration.seconds(300); // 5 minutes in seconds
-export const SCHEMA_REGISTRY_NAME = ORCABUS_EVENT_SCHEMA_REGISTRY_NAME;
+
+// Schema constants
+export const SCHEMA_REGISTRY_NAME = EVENT_SCHEMA_REGISTRY_NAME;
 export const SSM_SCHEMA_ROOT = path.join(SSM_PARAMETER_PATH_PREFIX, 'schemas');
 
 /* Event constants */
