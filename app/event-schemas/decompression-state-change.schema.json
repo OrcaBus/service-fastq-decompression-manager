@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "eventBusName": {
+      "type": "string",
+      "enum": ["OrcaBusMain"],
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "enum": ["orcabus.fastqdecompression"]
+    },
+    "detailType": {
+      "type": "string",
+      "minLength": 1,
+      "enum": ["DecompressionJobStateChange"]
+    },
+    "decompressedFileObject": {
+      "type": "object",
+      "properties": {
+        "ingestId": {
+          "type": "string"
+        },
+        "gzipFileUri": {
+          "type": "string"
+        }
+      },
+      "required": ["ingestId"]
+    },
+    "decompressedFileList": {
+      "type": "object",
+      "properties": {
+        "fastqId": {
+          "type": "string"
+        },
+        "decompressedFileUriByOraFileIngestIdList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decompressedFileObject"
+          }
+        }
+      },
+      "required": ["fastqId", "decompressedFileUriByOraFileIngestIdList"]
+    },
+    "decompressionJobOutput": {
+      "type": "object",
+      "properties": {
+        "decompressedFileList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decompressedFileList"
+          }
+        }
+      }
+    },
+    "gzipFileSizeByOraFileIngestIdObject": {
+      "type": "object",
+      "properties": {
+        "ingestId": {
+          "type": "string"
+        },
+        "gzipFileSizeInBytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["ingestId", "gzipFileSize"]
+    },
+    "gzipFileSizeCalculationOutputbyFastqId": {
+      "type": "object",
+      "properties": {
+        "fastqId": {
+          "type": "string"
+        },
+        "gzipFileSizeByOraFileIngestIdList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gzipFileSizeByOraFileIngestIdObject"
+          }
+        }
+      }
+    },
+    "gzipFileSizeCalculationOutput": {
+      "type": "object",
+      "properties": {
+        "gzipFileSizeList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gzipFileSizeCalculationOutputbyFastqId"
+          }
+        }
+      }
+    },
+    "rawMd5sumByOraFileIngestIdObject": {
+      "type": "object",
+      "properties": {
+        "ingestId": {
+          "type": "string"
+        },
+        "rawMd5sum": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["ingestId", "rawMd5sum"]
+    },
+    "rawMd5sumCalculationByFastqId": {
+      "type": "object",
+      "properties": {
+        "fastqId": {
+          "type": "string"
+        },
+        "rawMd5sumByOraFileIngestIdList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rawMd5sumByOraFileIngestIdObject"
+          }
+        }
+      }
+    },
+    "rawMd5sumCalculationOutput": {
+      "type": "object",
+      "properties": {
+        "rawMd5sumList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rawMd5sumCalculationByFastqId"
+          }
+        }
+      }
+    },
+    "readCountCalculationByFastqId": {
+      "type": "object",
+      "properties": {
+        "fastqId": {
+          "type": "string"
+        },
+        "readCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "readCountCalculationOutput": {
+      "type": "object",
+      "properties": {
+        "readCountList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/readCountCalculationByFastqId"
+          }
+        }
+      }
+    },
+    "detail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "jobType": {
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "ORA_DECOMPRESSION",
+            "GZIP_FILESIZE_CALCULATION",
+            "RAW_MD5SUM_CALCULATION",
+            "READ_COUNT_CALCULATION"
+          ]
+        },
+        "fastqIdList": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "maxReads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "outputUriPrefix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sampling": {
+          "type": "boolean",
+          "default": false
+        },
+        "noSplitByLane": {
+          "type": "boolean",
+          "default": false
+        },
+        "stepsExecutionArn": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "RUNNING", "FAILED", "ABORTED", "SUCCEEDED"]
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "errorMessages": {
+          "type": "string"
+        },
+        "output": {
+          "type": "object",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/decompressionJobOutput"
+            },
+            {
+              "$ref": "#/$defs/gzipFileSizeCalculationOutput"
+            },
+            {
+              "$ref": "#/$defs/rawMd5sumCalculationOutput"
+            },
+            {
+              "$ref": "#/$defs/readCountCalculationOutput"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "description": "ORA Decompression Request",
+  "type": "object",
+  "properties": {
+    "EventBusName": {
+      "$ref": "#/$defs/eventBusName"
+    },
+    "Source": {
+      "$ref": "#/$defs/source"
+    },
+    "DetailType": {
+      "$ref": "#/$defs/detailType"
+    },
+    "Detail": {
+      "$ref": "#/$defs/detail"
+    }
+  },
+  "required": ["EventBusName", "Source", "DetailType", "Detail"]
+}

@@ -6,6 +6,10 @@ import {
   REGION,
   StageName,
 } from '@orcabus/platform-cdk-constructs/shared-config/accounts';
+import { EVENT_SCHEMA_REGISTRY_NAME as ORCABUS_EVENT_SCHEMA_REGISTRY_NAME } from '@orcabus/platform-cdk-constructs/shared-config/event-bridge';
+
+// Stack constants
+export const STACK_PREFIX = 'fastq-deora';
 
 // Directory constants
 export const APP_ROOT = path.join(__dirname, '../../app');
@@ -13,6 +17,7 @@ export const LAMBDA_DIR = path.join(APP_ROOT, 'lambdas');
 export const ECS_DIR = path.join(APP_ROOT, 'ecs');
 export const STEP_FUNCTIONS_DIR = path.join(APP_ROOT, 'step-functions-templates');
 export const INTERFACE_DIR = path.join(APP_ROOT, 'interface');
+export const EVENT_SCHEMAS_DIR = path.join(APP_ROOT, 'event-schemas');
 
 // API constants
 export const API_VERSION = 'v1';
@@ -26,9 +31,6 @@ export const TASK_TOKEN_JOB_SORT_KEY = 'job_id';
 export const JOB_API_TABLE_NAME = 'FastqDecompressionJobsTable';
 export const JOB_API_TABLE_INDEXES = ['status'];
 
-// Step Functions constants
-export const FASTQ_DECOMPRESSION_STEP_FUNCTION_NAME_PREFIX = 'fastq-deora';
-
 // S3 constants
 export const S3_BUCKET_NAME: Record<StageName, string> = {
   BETA: `fastq-decompression-jobs-${ACCOUNT_ID_ALIAS.BETA}-${REGION}`,
@@ -38,9 +40,14 @@ export const S3_BUCKET_NAME: Record<StageName, string> = {
 export const S3_DEFAULT_DECOMPRESSION_PREFIX = `decompression-data/`;
 export const S3_DEFAULT_METADATA_PREFIX = `metadata/`;
 
+/* SSM Parameter Paths */
+export const SSM_PARAMETER_PATH_PREFIX = path.join(`/orcabus/services/${STACK_PREFIX}/`);
+
 // Event rule constants
 export const HEART_BEAT_SCHEDULER_RULE_NAME = 'heartbeatDecompressionJobsScheduler';
 export const DEFAULT_HEART_BEAT_INTERVAL = Duration.seconds(300); // 5 minutes in seconds
+export const SCHEMA_REGISTRY_NAME = ORCABUS_EVENT_SCHEMA_REGISTRY_NAME;
+export const SSM_SCHEMA_ROOT = path.join(SSM_PARAMETER_PATH_PREFIX, 'schemas');
 
 /* Event constants */
 export const EVENT_BUS_NAME = 'OrcaBusMain';
