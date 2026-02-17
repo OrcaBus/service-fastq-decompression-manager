@@ -44,6 +44,14 @@
             "minLength": 1
           }
         }
+      },
+      "required": ["fastqSetIdList"]
+    },
+    "fileUriByFastqId": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "fastqIdListPayload": {
@@ -55,7 +63,30 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "fileUriByFastqIdMap": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/fileUriByFastqId"
+          }
         }
+      },
+      "required": ["fastqIdList"]
+    },
+    "additionalPayloadProperties": {
+      "maxReads": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "sampling": {
+        "type": "boolean"
+      },
+      "noSplitByLane": {
+        "type": "boolean"
+      },
+      "outputUriPrefix": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "payload": {
@@ -67,7 +98,10 @@
         {
           "$ref": "#/$defs/fastqIdListPayload"
         }
-      ]
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/additionalPayloadProperties"
+      }
     },
     "syncDetail": {
       "type": "object",
