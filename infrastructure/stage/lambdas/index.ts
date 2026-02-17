@@ -48,10 +48,6 @@ export function buildLambdaFunctions(scope: Construct): LambdaResponse[] {
         id: 'AwsSolutions-IAM4',
         reason: 'We use the AWS Lambda basic execution role to run the lambdas.',
       },
-      {
-        id: 'AwsSolutions-L1',
-        reason: 'Were currently using Python 3.12',
-      },
     ],
     true
   );
