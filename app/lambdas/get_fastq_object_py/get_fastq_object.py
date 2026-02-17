@@ -153,7 +153,7 @@ def handler(event, context):
     # Get metadata json fastq pair dicts for read1
     if file_uri_list is not None:
         r1_ora_file_uri_src = next(filter(
-            lambda file_uri_iter_: file_uri_iter_['uri'].endswith('_R1_001.fastq.ora'),
+            lambda file_uri_iter_: file_uri_iter_.endswith('_R1_001.fastq.ora'),
             file_uri_list
         ))
     else:
@@ -183,7 +183,7 @@ def handler(event, context):
 
     if file_uri_list is not None:
         r2_ora_file_uri_src = next(filter(
-            lambda file_uri_iter_: file_uri_iter_['uri'].endswith('_R2_001.fastq.ora'),
+            lambda file_uri_iter_: file_uri_iter_.endswith('_R2_001.fastq.ora'),
             file_uri_list
         ))
     else:

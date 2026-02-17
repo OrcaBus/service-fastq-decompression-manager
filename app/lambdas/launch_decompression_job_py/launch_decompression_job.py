@@ -33,6 +33,9 @@ def handler(event, context) -> Dict[str, Job]:
     # Get the noSplitByLane parameter
     no_split_by_lane = event.get("noSplitByLane", False)
 
+    # Get the fileUriList parameter
+    file_uri_by_fastq_id_map = event.get("fileUriByFastqIdMap", None)
+
     # Return the job object
     return {
         "jobObject": create_job(
@@ -41,7 +44,8 @@ def handler(event, context) -> Dict[str, Job]:
             jobType=job_type,
             maxReads=max_reads,
             sampling=sampling,
-            noSplitByLane=no_split_by_lane
+            noSplitByLane=no_split_by_lane,
+            fileUriByFastqIdMap=file_uri_by_fastq_id_map,
         )
     }
 
