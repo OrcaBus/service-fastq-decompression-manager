@@ -65,7 +65,7 @@
           "minimum": 0
         }
       },
-      "required": ["ingestId", "gzipFileSize"]
+      "required": ["ingestId", "gzipFileSizeInBytes"]
     },
     "gzipFileSizeCalculationOutputbyFastqId": {
       "type": "object",
@@ -232,7 +232,7 @@
       }
     }
   },
-  "description": "ORA Decompression Request",
+  "description": "Decompression Job State Change",
   "type": "object",
   "properties": {
     "EventBusName": {

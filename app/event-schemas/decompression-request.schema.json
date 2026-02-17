@@ -39,10 +39,6 @@
       "properties": {
         "fastqSetIdList": {
           "type": "array",
-          "contains": {
-            "type": "string",
-            "minimum": 1
-          },
           "items": {
             "type": "string",
             "minLength": 1
@@ -55,10 +51,6 @@
       "properties": {
         "fastqIdList": {
           "type": "array",
-          "contains": {
-            "type": "string",
-            "minimum": 1
-          },
           "items": {
             "type": "string",
             "minLength": 1
