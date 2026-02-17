@@ -32,7 +32,7 @@ export function buildApiInterfaceLambda(scope: Construct, props: LambdaApiProps)
   // Create the lambda function
   const lambdaFunction = new PythonUvFunction(scope, props.lambdaName, {
     entry: path.join(INTERFACE_DIR),
-    runtime: lambda.Runtime.PYTHON_3_12,
+    runtime: lambda.Runtime.PYTHON_3_14,
     architecture: lambda.Architecture.ARM_64,
     index: 'handler.py',
     handler: 'handler',
@@ -108,10 +108,6 @@ export function buildApiInterfaceLambda(scope: Construct, props: LambdaApiProps)
   NagSuppressions.addResourceSuppressions(
     lambdaFunction,
     [
-      {
-        id: 'AwsSolutions-L1',
-        reason: 'Will migrate to PYTHON_3_13 ASAP, soz',
-      },
       {
         id: 'AwsSolutions-IAM4',
         reason: 'We use the standard AWS Lambda Basic execution role.',
