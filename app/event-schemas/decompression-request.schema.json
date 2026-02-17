@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "eventBusName": {
+      "type": "string",
+      "enum": ["OrcaBusMain"],
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "syncDetailType": {
+      "type": "string",
+      "minLength": 1,
+      "enum": [
+        "OraDecompressionRequestSync",
+        "GzipFileSizeCalculationRequestSync",
+        "OraToRawMd5sumCalculationRequestSync",
+        "ReadCountCalculationRequestSync"
+      ]
+    },
+    "asyncDetailType": {
+      "type": "string",
+      "minLength": 1,
+      "enum": [
+        "OraDecompressionRequest",
+        "GzipFileSizeCalculationRequest",
+        "OraToRawMd5sumCalculationRequest",
+        "ReadCountCalculationRequest"
+      ]
+    },
+    "taskToken": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fastqSetIdListPayload": {
+      "type": "object",
+      "properties": {
+        "fastqSetIdList": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "fastqIdListPayload": {
+      "type": "object",
+      "properties": {
+        "fastqIdList": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/fastqSetIdListPayload"
+        },
+        {
+          "$ref": "#/$defs/fastqIdListPayload"
+        }
+      ]
+    },
+    "syncDetail": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/payload"
+        },
+        "taskToken": {
+          "$ref": "#/$defs/taskToken"
+        }
+      },
+      "required": ["payload", "taskToken"]
+    },
+    "asyncDetail": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/payload"
+        }
+      },
+      "required": ["payload"]
+    }
+  },
+  "description": "ORA Decompression Request",
+  "type": "object",
+  "oneOf": [
+    {
+      "properties": {
+        "EventBusName": {
+          "$ref": "#/$defs/eventBusName"
+        },
+        "Source": {
+          "$ref": "#/$defs/source"
+        },
+        "DetailType": {
+          "$ref": "#/$defs/syncDetailType"
+        },
+        "Detail": {
+          "$ref": "#/$defs/syncDetail"
+        }
+      }
+    },
+    {
+      "properties": {
+        "EventBusName": {
+          "$ref": "#/$defs/eventBusName"
+        },
+        "Source": {
+          "$ref": "#/$defs/source"
+        },
+        "DetailType": {
+          "$ref": "#/$defs/asyncDetailType"
+        },
+        "Detail": {
+          "$ref": "#/$defs/asyncDetail"
+        }
+      }
+    }
+  ],
+  "required": ["EventBusName", "Source", "DetailType", "Detail"]
+}
