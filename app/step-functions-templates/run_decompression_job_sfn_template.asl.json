@@ -19,7 +19,8 @@
         "noSplitByLane": "{% $states.input.noSplitByLane ? $states.input.noSplitByLane : false %}",
         "s3JobMetadataBucket": "{% $states.input.s3JobMetadataBucket %}",
         "s3JobMetadataPrefix": "{% $states.input.s3JobMetadataPrefix %}",
-        "outputUriPrefix": "{% $states.input.outputUriPrefix %}"
+        "outputUriPrefix": "{% $states.input.outputUriPrefix %}",
+        "fileUriByFastqIdMap": "{% $states.input.fileUriByFastqIdMap %}"
       }
     },
     "Initialise run": {
@@ -157,7 +158,8 @@
                 "metadataBucket": "{% $s3JobMetadataBucket %}",
                 "metadataPathPrefix": "{% $s3JobMetadataPrefix %}",
                 "maxReads": "{% $maxReads %}",
-                "noSplitByLane": "{% $noSplitByLane %}"
+                "noSplitByLane": "{% $noSplitByLane %}",
+                "fileUriList": "{% ( $fileUriByFastqIdMap and ( $fileUriByFastqIdMap ~> $lookup($fastqIdListIter) ) ) ? $fileUriByFastqIdMap ~> $lookup($fastqIdListIter) : null %}"
               }
             },
             "Retry": [

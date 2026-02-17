@@ -6,7 +6,7 @@ The job data and response models
 from copy import deepcopy
 
 from src.fastapi_tools import QueryPaginatedResponse
-from typing import List, Literal
+from typing import List, Literal, Dict
 from os import environ
 from typing import Optional, Self, ClassVar, Union
 
@@ -61,6 +61,7 @@ class JobBase(BaseModel):
     output_uri_prefix: Optional[str] = None
     sampling: Optional[bool] = None
     no_split_by_lane: Optional[bool] = None
+    file_uri_by_fastq_id_map: Optional[Dict[str, List[str]]] = None
 
 
 class JobOrcabusId(BaseModel):

@@ -7,6 +7,7 @@ for both read1 and read2
 
 # Standard imports
 import re
+from typing import List
 
 # Layer imports
 from orcabus_api_tools.fastq import get_fastq
@@ -137,7 +138,9 @@ def handler(event, context):
     metadata_path_prefix: str = event.get("metadataPathPrefix")
     max_reads: int = event.get("maxReads")
     no_split_by_lane: bool = event.get("noSplitByLane", False)
+    file_uri_list: List[str] = event.get("fileUriList", None)
 
+    # Ensure that the fastq id is present
     if not fastq_id:
         raise ValueError("Expected 'fastqId' in event")
 
@@ -148,8 +151,17 @@ def handler(event, context):
     )
 
     # Get metadata json fastq pair dicts for read1
+    if file_uri_list is not None:
+        r1_ora_file_uri_src = next(filter(
+            lambda file_uri_iter_: file_uri_iter_.endswith('_R1_001.fastq.ora'),
+            file_uri_list
+        ))
+    else:
+        r1_ora_file_uri_src = fastq_obj['readSet']['r1']['s3Uri']
+
+    # Create the metadata json fastq pair dicts for read1, we will update with read2 if it exists
     metadata_json_fastq_pair_dicts = {
-        "r1OraFileUriSrc": fastq_obj['readSet']['r1']['s3Uri'],
+        "r1OraFileUriSrc": r1_ora_file_uri_src,
         "r1OraIngestId": fastq_obj['readSet']['r1']['ingestId'],
         "r1GzipFileSizeInBytes": (
             int(get_gzip_file_size_in_bytes(fastq_obj, 'r1', max_reads))
@@ -169,9 +181,17 @@ def handler(event, context):
         # If there is no read2, return only read1 metadata
         return metadata_json_fastq_pair_dicts
 
+    if file_uri_list is not None:
+        r2_ora_file_uri_src = next(filter(
+            lambda file_uri_iter_: file_uri_iter_.endswith('_R2_001.fastq.ora'),
+            file_uri_list
+        ))
+    else:
+        r2_ora_file_uri_src = fastq_obj['readSet']['r2']['s3Uri']
+
     # Get metadata json fastq pair dicts for read2
     metadata_json_fastq_pair_dicts.update({
-        "r2OraFileUriSrc": fastq_obj['readSet']['r2']['s3Uri'],
+        "r2OraFileUriSrc": r2_ora_file_uri_src,
         "r2OraIngestId": fastq_obj['readSet']['r2']['ingestId'],
         "r2GzipFileSizeInBytes": (
             int(get_gzip_file_size_in_bytes(fastq_obj, 'r2', max_reads))
