@@ -73,7 +73,11 @@ export class StatelessApplicationStack extends cdk.Stack {
     );
 
     // Part 1 - Build Lambdas
-    const lambdaObjects = buildLambdaFunctions(this);
+    const lambdaObjects = buildLambdaFunctions(this, {
+      /* Bucket props */
+      metadataBucket: s3Bucket,
+      metadataPrefix: props.s3MetadataPrefix,
+    });
 
     // Part 2 - Build ECS Tasks / Fargate Clusters
     const fargateDecompressionTaskObj = buildDecompressionFargateTask(this, {

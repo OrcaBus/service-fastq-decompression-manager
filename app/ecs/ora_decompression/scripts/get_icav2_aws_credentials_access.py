@@ -8,7 +8,7 @@ import json
 from wrapica.project_data import (
     ProjectData,
     convert_uri_to_project_data_obj,
-    get_aws_credentials_access_for_project_folder
+    get_aws_credentials_access_for_project_folder,
 )
 from wrapica.libica_models import AwsTempCredentials
 
@@ -25,8 +25,8 @@ def main():
 
     # Step 3 - Get AWS credentials access
     aws_temp_credentials_access: AwsTempCredentials = get_aws_credentials_access_for_project_folder(
-        project_data_folder_obj.project_id,
-        project_data_folder_obj.data.id
+        project_id=project_data_folder_obj.project_id,
+        folder_id=project_data_folder_obj.data.id
     )
 
     # Write project data object to file

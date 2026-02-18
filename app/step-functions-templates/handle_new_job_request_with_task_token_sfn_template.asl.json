@@ -25,7 +25,8 @@
           "jobType": "{% $jobType %}",
           "maxReads": "{% $payload.maxReads ? $payload.maxReads : null %}",
           "sampling": "{% $payload.sampling ? $payload.sampling : null %}",
-          "noSplitByLane": "{% $payload.noSplitByLane ? $payload.noSplitByLane : null %}"
+          "noSplitByLane": "{% $payload.noSplitByLane ? $payload.noSplitByLane : null %}",
+          "fileUriByFastqIdMap": "{% $payload.fileUriByFastqIdMap ? $payload.fileUriByFastqIdMap : null %}"
         }
       },
       "Retry": [

@@ -3,8 +3,11 @@
 """
 Update fastq decompression service status
 """
+
+# Standard imports
 from typing import Literal, Dict, Union, List
 
+# Layer imports
 from orcabus_api_tools.fastq.models import FastqListRow
 from orcabus_api_tools.fastq_decompression import update_status
 
