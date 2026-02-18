@@ -4,10 +4,12 @@ import {
   API_NAME,
   EVENT_BUS_NAME,
   FASTQ_DECOMPRESSION_SUBDOMAIN_NAME,
+  ICAV2_PROJECT_TO_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+  ICAV2_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+  ICAV2_STORAGE_CREDENTIALS_SSM_PARAMETER_PATH_PREFIX,
   JOB_API_TABLE_INDEXES,
   JOB_API_TABLE_NAME,
   S3_BUCKET_NAME,
-  S3_DEFAULT_METADATA_PREFIX,
   TASK_TOKEN_TABLE_NAME,
 } from './constants';
 import { getDefaultApiGatewayConfiguration } from '@orcabus/platform-cdk-constructs/api-gateway';
@@ -36,13 +38,21 @@ export const getStatelessStackProps = (stage: StageName): StatelessApplicationSt
 
     // S3 Stuff
     s3BucketName: S3_BUCKET_NAME[stage],
-    s3MetadataPrefix: S3_DEFAULT_METADATA_PREFIX,
 
     // API Gateway stuff
     apiGatewayCognitoProps: {
       ...getDefaultApiGatewayConfiguration(stage),
       apiName: API_NAME,
       customDomainNamePrefix: FASTQ_DECOMPRESSION_SUBDOMAIN_NAME,
+    },
+
+    // SSM Parameter stuff
+    ssmParameterPaths: {
+      storageConfigurationSsmParameterPathPrefix:
+        ICAV2_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+      projectToStorageConfigurationsSsmParameterPathPrefix:
+        ICAV2_PROJECT_TO_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+      storageCredentialsSsmParameterPathPrefix: ICAV2_STORAGE_CREDENTIALS_SSM_PARAMETER_PATH_PREFIX,
     },
   };
 };

@@ -1,6 +1,13 @@
 import { StageName } from '@orcabus/platform-cdk-constructs/shared-config/accounts';
 import { OrcaBusApiGatewayProps } from '@orcabus/platform-cdk-constructs/api-gateway';
 
+export interface SsmParameterPaths {
+  // ICA Ssm Parameter Paths
+  storageConfigurationSsmParameterPathPrefix: string;
+  projectToStorageConfigurationsSsmParameterPathPrefix: string;
+  storageCredentialsSsmParameterPathPrefix: string;
+}
+
 export interface StatefulApplicationStackConfig {
   // Table stuff
   decompressionJobsTableName: string;
@@ -25,8 +32,10 @@ export interface StatelessApplicationStackConfig {
 
   // S3 stuff
   s3BucketName: string;
-  s3MetadataPrefix: string;
 
   /* API Stuff */
   apiGatewayCognitoProps: OrcaBusApiGatewayProps;
+
+  /* ICAV2 SSM Parameter Path Stuff */
+  ssmParameterPaths: SsmParameterPaths;
 }

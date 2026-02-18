@@ -73,11 +73,7 @@ export class StatelessApplicationStack extends cdk.Stack {
     );
 
     // Part 1 - Build Lambdas
-    const lambdaObjects = buildLambdaFunctions(this, {
-      /* Bucket props */
-      metadataBucket: s3Bucket,
-      metadataPrefix: props.s3MetadataPrefix,
-    });
+    const lambdaObjects = buildLambdaFunctions(this);
 
     // Part 2 - Build ECS Tasks / Fargate Clusters
     const fargateDecompressionTaskObj = buildDecompressionFargateTask(this, {
@@ -85,6 +81,13 @@ export class StatelessApplicationStack extends cdk.Stack {
       hostnameSsmParameterObj: hostedZoneNameSsmParameter,
       orcabusAccessTokenSecretObj: orcabusTokenSecretObj,
       fastqDecompressionS3Bucket: s3Bucket,
+      // SSM Parameter paths
+      storageConfigurationSsmParameterPathPrefix:
+        props.ssmParameterPaths.storageConfigurationSsmParameterPathPrefix,
+      projectToStorageConfigurationsSsmParameterPathPrefix:
+        props.ssmParameterPaths.projectToStorageConfigurationsSsmParameterPathPrefix,
+      storageCredentialsSsmParameterPathPrefix:
+        props.ssmParameterPaths.storageCredentialsSsmParameterPathPrefix,
     });
 
     // Part 3 - Build Step Functions

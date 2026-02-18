@@ -11,4 +11,8 @@ export interface BuildDecompressionFargateEcsProps {
   hostnameSsmParameterObj: IStringParameter;
   orcabusAccessTokenSecretObj: ISecret;
   fastqDecompressionS3Bucket: IBucket;
+  // SSM Parameter Prefixes
+  storageConfigurationSsmParameterPathPrefix: string;
+  projectToStorageConfigurationsSsmParameterPathPrefix: string;
+  storageCredentialsSsmParameterPathPrefix: string;
 }
