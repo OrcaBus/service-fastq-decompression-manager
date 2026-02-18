@@ -75,7 +75,6 @@ export const stepFunctionRequirementsMap: Record<StepFunctionName, StepFunctionR
 export const stepFunctionLambdaMap: Record<StepFunctionName, LambdaNameList[]> = {
   handleNewJobRequestWithTaskToken: ['launchDecompressionJob'],
   runDecompressionJob: [
-    'setIcav2ConfigFiles',
     'getFastqObject',
     'updateFastqDecompressionServiceStatus',
     'getFastqSetIdListFromFastqIdList',
