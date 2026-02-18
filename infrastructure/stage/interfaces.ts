@@ -25,6 +25,7 @@ export interface StatelessApplicationStackConfig {
 
   // S3 stuff
   s3BucketName: string;
+  s3MetadataPrefix: string;
 
   /* API Stuff */
   apiGatewayCognitoProps: OrcaBusApiGatewayProps;

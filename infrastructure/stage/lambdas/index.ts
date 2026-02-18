@@ -1,7 +1,13 @@
 /**
  * Use the PythonUvFunction script to build the lambda functions
  */
-import { lambdaNameList, LambdaProps, lambdaRequirementsMap, LambdaResponse } from './interfaces';
+import {
+  BuildLambdasProps,
+  lambdaNameList,
+  LambdaProps,
+  lambdaRequirementsMap,
+  LambdaResponse,
+} from './interfaces';
 import { PythonUvFunction } from '@orcabus/platform-cdk-constructs/lambda';
 import { Construct } from 'constructs';
 import { camelCaseToSnakeCase } from '../utils';
@@ -22,7 +28,27 @@ function buildLambdaFunction(scope: Construct, props: LambdaProps): LambdaRespon
     handler: 'handler',
     timeout: Duration.seconds(60),
     includeOrcabusApiToolsLayer: lambdaRequirements.needsOrcabusApiTools,
+    includeIcav2Layer: lambdaRequirements.needsIcav2Tools,
+    // Set to 512 if needsIcav2Tools otherwise undefined
+    memorySize: lambdaRequirements.needsIcav2Tools ? 512 : undefined,
   });
+
+  if (lambdaRequirements.needsMetadataBucketPermissions) {
+    // Grant write permissions
+    props.metadataBucket.grantWrite(lambdaObject, `${props.metadataPrefix}*`);
+    // Add IAM5 suppression for the above permission grant
+    NagSuppressions.addResourceSuppressions(
+      lambdaObject,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'The lambda needs write permissions to the metadata bucket to set ICAv2 config files.',
+        },
+      ],
+      true
+    );
+  }
 
   return {
     lambdaName: props.lambdaName,
@@ -30,11 +56,12 @@ function buildLambdaFunction(scope: Construct, props: LambdaProps): LambdaRespon
   };
 }
 
-export function buildLambdaFunctions(scope: Construct): LambdaResponse[] {
+export function buildLambdaFunctions(scope: Construct, props: BuildLambdasProps): LambdaResponse[] {
   const lambdaList: LambdaResponse[] = [];
   for (const lambdaName of lambdaNameList) {
     lambdaList.push(
       buildLambdaFunction(scope, {
+        ...props,
         lambdaName: lambdaName,
       })
     );

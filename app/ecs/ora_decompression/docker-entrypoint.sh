@@ -52,6 +52,7 @@ export ORCABUS_TOKEN
 # without needing to decompress the entire file
 MAX_READS_IF_TOTAL_READ_COUNT_IS_SET="10000000"  # 10 million reads
 RANDOM_SAMPLING_SEED="11"  # Must be a fixed value since we need to ensure R1 and R2 return the same reads
+ORA_LOGS_FILE="ora_logs.txt"
 
 # Inputs
 if [[ ! -v INPUT_ORA_URI ]]; then
@@ -77,6 +78,46 @@ ICAV2_ACCESS_TOKEN="$( \
     --query SecretString
 )"
 export ICAV2_ACCESS_TOKEN
+
+# Set ICAV2 Configurations
+echo_stderr "Setting the storage configuration files and env vars"
+if [[ ! -v METADATA_BUCKET ]]; then
+  echo_stderr "Error! Expected env var 'METADATA_BUCKET' but was not found"
+  exit 1
+fi
+# Storage configuration list file key prefix
+if [[ ! -v ICAV2_STORAGE_CONFIGURATION_LIST_FILE_KEY_PREFIX ]]; then
+  echo_stderr "Error! Expected env var 'ICAV2_STORAGE_CONFIGURATION_LIST_FILE_KEY_PREFIX' but was not found"
+  exit 1
+fi
+ICAV2_STORAGE_CONFIGURATION_LIST_FILE="$(basename "${ICAV2_STORAGE_CONFIGURATION_LIST_FILE_KEY_PREFIX}")"
+aws s3 cp \
+  --quiet \
+  "s3://${METADATA_BUCKET}/${ICAV2_STORAGE_CONFIGURATION_LIST_FILE_KEY_PREFIX}" \
+  "${ICAV2_STORAGE_CONFIGURATION_LIST_FILE}"
+export ICAV2_STORAGE_CONFIGURATION_LIST_FILE
+# Project to Storage Configuration mapping
+if [[ ! -v ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE_KEY_PREFIX ]]; then
+  echo_stderr "Error! Expected env var 'ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE_KEY_PREFIX' but was not found"
+  exit 1
+fi
+ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE="$(basename "${ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE_KEY_PREFIX}")"
+aws s3 cp \
+  --quiet \
+  "s3://${METADATA_BUCKET}/${ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE_KEY_PREFIX}" \
+  "${ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE}"
+export ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE
+# Storage credential list file key prefix
+if [[ ! -v ICAV2_STORAGE_CREDENTIAL_LIST_FILE_KEY_PREFIX ]]; then
+  echo_stderr "Error! Expected env var 'ICAV2_STORAGE_CREDENTIAL_LIST_FILE_KEY_PREFIX' but was not found"
+  exit 1
+fi
+ICAV2_STORAGE_CREDENTIAL_LIST_FILE="$(basename "${ICAV2_STORAGE_CREDENTIAL_LIST_FILE_KEY_PREFIX}")"
+aws s3 cp \
+  --quiet \
+  "s3://${METADATA_BUCKET}/${ICAV2_STORAGE_CREDENTIAL_LIST_FILE_KEY_PREFIX}" \
+  "${ICAV2_STORAGE_CREDENTIAL_LIST_FILE}"
+export ICAV2_STORAGE_CREDENTIAL_LIST_FILE
 
 # Get the bucket from the input ora uri
 ora_bucket="$( \
@@ -225,7 +266,7 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
         --raw \
         --stdout \
         --ora-reference "${ORADATA_PATH}" \
-        - | \
+        - 2>"${ORA_LOGS_FILE}" | \
       (
         if [[ "${SAMPLING}" == "true" ]]; then
           seqtk sample \
@@ -324,7 +365,7 @@ elif [[ "${JOB_TYPE}" == "GZIP_FILESIZE_CALCULATION" ]]; then
         --raw \
         --stdout \
         --ora-reference "${ORADATA_PATH}" \
-        - || \
+        - 2>"${ORA_LOGS_FILE}" || \
       true
     ) | \
     (
@@ -387,7 +428,7 @@ elif [[ "${JOB_TYPE}" == "RAW_MD5SUM_CALCULATION" ]]; then
       --raw \
       --stdout \
       --ora-reference "${ORADATA_PATH}" \
-      - | \
+      - 2>"${ORA_LOGS_FILE}" | \
     md5sum | \
     cut -d' ' -f1
   )"
@@ -425,7 +466,7 @@ elif [[ "${JOB_TYPE}" == "READ_COUNT_CALCULATION" ]]; then
       --raw \
       --stdout \
       --ora-reference "${ORADATA_PATH}" \
-      - | \
+      - 2>"${ORA_LOGS_FILE}" | \
     wc -l
   )"
 
@@ -457,4 +498,14 @@ else
   echo_stderr "Error! Unknown JOB_TYPE: ${JOB_TYPE}"
   exit 1
 
+fi
+
+# Does the ora logs file exist?
+# If so, print the logs to stderr, if not print that no logs were found
+if [[ -f "${ORA_LOGS_FILE}" && -s "${ORA_LOGS_FILE}" ]]; then
+  echo_stderr "Logs from orad (stderr)"
+  cat "${ORA_LOGS_FILE}" 1>&2
+  exit 1
+else
+  echo_stderr "No logs from orad, we're good to go!"
 fi

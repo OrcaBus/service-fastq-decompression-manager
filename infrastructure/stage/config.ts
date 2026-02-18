@@ -7,6 +7,7 @@ import {
   JOB_API_TABLE_INDEXES,
   JOB_API_TABLE_NAME,
   S3_BUCKET_NAME,
+  S3_DEFAULT_METADATA_PREFIX,
   TASK_TOKEN_TABLE_NAME,
 } from './constants';
 import { getDefaultApiGatewayConfiguration } from '@orcabus/platform-cdk-constructs/api-gateway';
@@ -35,6 +36,7 @@ export const getStatelessStackProps = (stage: StageName): StatelessApplicationSt
 
     // S3 Stuff
     s3BucketName: S3_BUCKET_NAME[stage],
+    s3MetadataPrefix: S3_DEFAULT_METADATA_PREFIX,
 
     // API Gateway stuff
     apiGatewayCognitoProps: {

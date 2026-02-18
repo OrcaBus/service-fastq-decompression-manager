@@ -1,7 +1,7 @@
 FROM ghcr.io/umccr/orad:2.7.0
 
 ARG TARGETPLATFORM
-ARG WRAPICA_VERSION="2.37.0"
+ARG WRAPICA_VERSION="2.40.1.post20260218114718"
 ARG SEQTK_URL="https://github.com/lh3/seqtk.git"
 ARG SEQTK_VERSION="1.5"
 
@@ -51,7 +51,8 @@ RUN \
       cd "$(basename "${SEQTK_URL}" .git)" && \
       make && \
       make install \
-    )
+    ) && \
+    rm -rf "$(basename "${SEQTK_URL}" .git)"
 
 # Copy the scripts to the docker container
 # Make the scripts executable

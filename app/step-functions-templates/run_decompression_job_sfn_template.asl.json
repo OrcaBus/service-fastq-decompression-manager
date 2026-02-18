@@ -9,7 +9,7 @@
     },
     "Save vars": {
       "Type": "Pass",
-      "Next": "Initialise run",
+      "Next": "ICAv2 Configuration Vars",
       "Assign": {
         "jobId": "{% $states.input.jobId %}",
         "jobType": "{% $states.input.jobType %}",
@@ -21,6 +21,15 @@
         "s3JobMetadataPrefix": "{% $states.input.s3JobMetadataPrefix %}",
         "outputUriPrefix": "{% $states.input.outputUriPrefix %}",
         "fileUriByFastqIdMap": "{% $states.input.fileUriByFastqIdMap %}"
+      }
+    },
+    "ICAv2 Configuration Vars": {
+      "Type": "Pass",
+      "Next": "Initialise run",
+      "Assign": {
+        "s3JobMetadataStorageConfigurationListKeyPrefix": "{% $s3JobMetadataPrefix & 'storage_configuration_list.yaml' %}",
+        "s3JobMetadataProjectToStorageConfigurationMappingListKeyPrefix": "{% $s3JobMetadataPrefix & 'project_to_storage_configuration_mapping_list.yaml' %}",
+        "s3JobMetadataStorageCredentialListKeyPrefix": "{% $s3JobMetadataPrefix & 'storage_credential_list.yaml' %}"
       }
     },
     "Initialise run": {
@@ -176,10 +185,39 @@
                 "JitterStrategy": "FULL"
               }
             ],
-            "Next": "Decompress fastqs",
+            "Next": "Set icav2 config files",
             "Assign": {
               "fastqObjDict": "{% $states.result.Payload.fastqObjDict %}"
             },
+            "Output": {}
+          },
+          "Set icav2 config files": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+              "FunctionName": "${__set_icav2_config_files_lambda_function_arn__}",
+              "Payload": {
+                "metadataBucket": "{% $s3JobMetadataBucket %}",
+                "storageConfigurationListKeyPrefix": "{% $s3JobMetadataStorageConfigurationListKeyPrefix %}",
+                "projectToStorageConfigurationMappingListKeyPrefix": "{% $s3JobMetadataProjectToStorageConfigurationMappingListKeyPrefix %}",
+                "storageCredentialListKeyPrefix": "{% $s3JobMetadataStorageCredentialListKeyPrefix %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Decompress fastqs",
             "Output": {}
           },
           "Decompress fastqs": {
@@ -245,6 +283,22 @@
                               {
                                 "Name": "TOTAL_READ_COUNT",
                                 "Value": "{% $string($fastqObjDict.totalReadCount) %}"
+                              },
+                              {
+                                "Name": "METADATA_BUCKET",
+                                "Value": "{% $s3JobMetadataBucket %}"
+                              },
+                              {
+                                "Name": "ICAV2_STORAGE_CONFIGURATION_LIST_FILE_KEY_PREFIX",
+                                "Value": "{% $s3JobMetadataStorageConfigurationListKeyPrefix %}"
+                              },
+                              {
+                                "Name": "ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE_KEY_PREFIX",
+                                "Value": "{% $s3JobMetadataProjectToStorageConfigurationMappingListKeyPrefix %}"
+                              },
+                              {
+                                "Name": "ICAV2_STORAGE_CREDENTIAL_LIST_FILE_KEY_PREFIX",
+                                "Value": "{% $s3JobMetadataStorageCredentialListKeyPrefix %}"
                               }
                             ]
                           }
@@ -350,6 +404,22 @@
                               {
                                 "Name": "TOTAL_READ_COUNT",
                                 "Value": "{% $string($fastqObjDict.totalReadCount) %}"
+                              },
+                              {
+                                "Name": "METADATA_BUCKET",
+                                "Value": "{% $s3JobMetadataBucket %}"
+                              },
+                              {
+                                "Name": "ICAV2_STORAGE_CONFIGURATION_LIST_FILE_KEY_PREFIX",
+                                "Value": "{% $s3JobMetadataStorageConfigurationListKeyPrefix %}"
+                              },
+                              {
+                                "Name": "ICAV2_PROJECT_TO_STORAGE_CONFIGURATION_MAPPING_LIST_FILE_KEY_PREFIX",
+                                "Value": "{% $s3JobMetadataProjectToStorageConfigurationMappingListKeyPrefix %}"
+                              },
+                              {
+                                "Name": "ICAV2_STORAGE_CREDENTIAL_LIST_FILE_KEY_PREFIX",
+                                "Value": "{% $s3JobMetadataStorageCredentialListKeyPrefix %}"
                               }
                             ]
                           }
@@ -476,7 +546,8 @@
       ],
       "Next": "Update fastq decompression status (complete)",
       "Assign": {
-        "metadataJsonFastqPairDictsList": "{% [ $states.result.(metadataJsonWithFastqId) ] %}"
+        "metadataJsonFastqPairDictsList": "{% [ $states.result.(metadataJsonWithFastqId) ] %}",
+        "status": "SUCCEEDED"
       }
     },
     "Update fastq decompression status (complete)": {
@@ -507,7 +578,24 @@
           "JitterStrategy": "FULL"
         }
       ],
-      "End": true
+      "Next": "Did job succeed?"
+    },
+    "Did job succeed?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Success",
+          "Condition": "{% $status = 'SUCCEEDED' %}",
+          "Comment": "Success!"
+        }
+      ],
+      "Default": "Report Failure"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "Report Failure": {
+      "Type": "Fail"
     },
     "Fastq sync (Needs Read Count)": {
       "Type": "Task",
