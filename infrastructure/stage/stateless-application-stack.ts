@@ -34,12 +34,12 @@ export class StatelessApplicationStack extends cdk.Stack {
 
     // Set up
     // Get table
-    const jobTableObject = dynamodb.Table.fromTableName(
+    const jobTableObject = dynamodb.TableV2.fromTableName(
       this,
       'jobTable',
       props.decompressionJobsTableName
     );
-    const taskTokenTable = dynamodb.Table.fromTableName(
+    const taskTokenTable = dynamodb.TableV2.fromTableName(
       this,
       'taskTokenTable',
       props.taskTokenTableName
