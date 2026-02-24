@@ -81,6 +81,13 @@ export class StatelessApplicationStack extends cdk.Stack {
       hostnameSsmParameterObj: hostedZoneNameSsmParameter,
       orcabusAccessTokenSecretObj: orcabusTokenSecretObj,
       fastqDecompressionS3Bucket: s3Bucket,
+      // SSM Parameter paths
+      storageConfigurationSsmParameterPathPrefix:
+        props.ssmParameterPaths.storageConfigurationSsmParameterPathPrefix,
+      projectToStorageConfigurationsSsmParameterPathPrefix:
+        props.ssmParameterPaths.projectToStorageConfigurationsSsmParameterPathPrefix,
+      storageCredentialsSsmParameterPathPrefix:
+        props.ssmParameterPaths.storageCredentialsSsmParameterPathPrefix,
     });
 
     // Part 3 - Build Step Functions

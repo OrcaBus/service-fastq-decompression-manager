@@ -4,6 +4,9 @@ import {
   API_NAME,
   EVENT_BUS_NAME,
   FASTQ_DECOMPRESSION_SUBDOMAIN_NAME,
+  ICAV2_PROJECT_TO_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+  ICAV2_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+  ICAV2_STORAGE_CREDENTIALS_SSM_PARAMETER_PATH_PREFIX,
   JOB_API_TABLE_INDEXES,
   JOB_API_TABLE_NAME,
   S3_BUCKET_NAME,
@@ -41,6 +44,15 @@ export const getStatelessStackProps = (stage: StageName): StatelessApplicationSt
       ...getDefaultApiGatewayConfiguration(stage),
       apiName: API_NAME,
       customDomainNamePrefix: FASTQ_DECOMPRESSION_SUBDOMAIN_NAME,
+    },
+
+    // SSM Parameter stuff
+    ssmParameterPaths: {
+      storageConfigurationSsmParameterPathPrefix:
+        ICAV2_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+      projectToStorageConfigurationsSsmParameterPathPrefix:
+        ICAV2_PROJECT_TO_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX,
+      storageCredentialsSsmParameterPathPrefix: ICAV2_STORAGE_CREDENTIALS_SSM_PARAMETER_PATH_PREFIX,
     },
   };
 };

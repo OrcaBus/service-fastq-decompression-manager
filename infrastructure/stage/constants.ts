@@ -51,6 +51,14 @@ export const DEFAULT_HEART_BEAT_INTERVAL = Duration.seconds(300); // 5 minutes i
 export const SCHEMA_REGISTRY_NAME = EVENT_SCHEMA_REGISTRY_NAME;
 export const SSM_SCHEMA_ROOT = path.join(SSM_PARAMETER_PATH_PREFIX, 'schemas');
 
+/* External SSM Parameter Constants */
+export const ICAV2_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX =
+  '/icav2/umccr-prod/storage-configurations/';
+export const ICAV2_PROJECT_TO_STORAGE_CONFIGURATIONS_SSM_PARAMETER_PATH_PREFIX =
+  '/icav2/umccr-prod/project-to-storage-configurations/';
+export const ICAV2_STORAGE_CREDENTIALS_SSM_PARAMETER_PATH_PREFIX =
+  '/icav2/umccr-prod/storage-credentials/';
+
 /* Event constants */
 export const EVENT_BUS_NAME = 'OrcaBusMain';
 export const DECOMPRESSION_JOB_STATE_CHANGE_DETAIL_TYPE = 'DecompressionJobStateChange';

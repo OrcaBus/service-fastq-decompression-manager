@@ -476,7 +476,8 @@
       ],
       "Next": "Update fastq decompression status (complete)",
       "Assign": {
-        "metadataJsonFastqPairDictsList": "{% [ $states.result.(metadataJsonWithFastqId) ] %}"
+        "metadataJsonFastqPairDictsList": "{% [ $states.result.(metadataJsonWithFastqId) ] %}",
+        "status": "SUCCEEDED"
       }
     },
     "Update fastq decompression status (complete)": {
@@ -507,7 +508,24 @@
           "JitterStrategy": "FULL"
         }
       ],
-      "End": true
+      "Next": "Did job succeed?"
+    },
+    "Did job succeed?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Success",
+          "Condition": "{% $status = 'SUCCEEDED' %}",
+          "Comment": "Success!"
+        }
+      ],
+      "Default": "Report Failure"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "Report Failure": {
+      "Type": "Fail"
     },
     "Fastq sync (Needs Read Count)": {
       "Type": "Task",

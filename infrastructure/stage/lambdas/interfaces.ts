@@ -50,6 +50,7 @@ export interface LambdaProps {
   lambdaName: LambdaNameList;
 }
 
-export interface LambdaResponse extends LambdaProps {
+export interface LambdaResponse {
+  lambdaName: LambdaNameList;
   lambdaFunction: PythonFunction;
 }
