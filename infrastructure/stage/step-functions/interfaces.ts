@@ -77,7 +77,6 @@ export const stepFunctionLambdaMap: Record<StepFunctionName, LambdaNameList[]> =
   runDecompressionJob: [
     'getFastqObject',
     'updateFastqDecompressionServiceStatus',
-    'getFastqSetIdListFromFastqIdList',
   ],
   heartbeatMonitor: ['listRunningJobs', 'updateFastqDecompressionServiceStatus'],
   handleDecompressionStateChangeEvent: [],
