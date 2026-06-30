@@ -318,7 +318,11 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
         jq -r '.AWS_REGION' <<< "${aws_s3_access_creds_json_str}"
       )" \
       aws s3 cp \
-        --expected-size="${GZIP_COMPRESSION_SIZE_IN_BYTES}" \
+        --expected-size="$( \
+        	jq --null-input --raw-output \
+        	  --argjson size "${GZIP_COMPRESSION_SIZE_IN_BYTES}" \
+        	  '(1.10 * $size) | round'
+        )" \
         --sse=AES256 \
         - \
         "$( \
@@ -329,7 +333,11 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
         )"
     else
       aws s3 cp \
-        --expected-size="${GZIP_COMPRESSION_SIZE_IN_BYTES}" \
+        --expected-size="$( \
+        	jq --null-input --raw-output \
+        	  --argjson size "${GZIP_COMPRESSION_SIZE_IN_BYTES}" \
+        	  '(1.10 * $size) | round'
+        )" \
         --sse=AES256 \
         - \
         "${OUTPUT_GZIP_URI}"
