@@ -21,10 +21,11 @@ import { buildAllEventBridgeTargets } from './event-targets';
 import { ICAV2_ACCESS_TOKEN_SECRET_ID } from '@orcabus/platform-cdk-constructs/shared-config/icav2';
 import { HOSTED_ZONE_DOMAIN_PARAMETER_NAME } from '@orcabus/platform-cdk-constructs/api-gateway';
 import { DEFAULT_ORCABUS_TOKEN_SECRET_ID } from '@orcabus/platform-cdk-constructs/lambda/config';
+import { GitStack } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
 
 type StatelessApplicationStackProps = StatelessApplicationStackConfig & cdk.StackProps;
 
-export class StatelessApplicationStack extends cdk.Stack {
+export class StatelessApplicationStack extends GitStack {
   public readonly stageName: StageName;
 
   constructor(scope: Construct, id: string, props: StatelessApplicationStackProps) {
