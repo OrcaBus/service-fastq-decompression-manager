@@ -167,6 +167,12 @@ presigned_url="$(  \
   jq --raw-output
 )"
 
+# Confirm presigned url is not empty
+if [[ -v "${presigned_url}" ]]; then
+  echo_stderr "Could not generate presigned url of ${INPUT_ORA_URI}, exiting"
+  exit 1
+fi
+
 # Download + Upload the ora file as a gzipped compressed file
 if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
   # Get the sampling parameter
