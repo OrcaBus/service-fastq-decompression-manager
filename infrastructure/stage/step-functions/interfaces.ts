@@ -74,11 +74,7 @@ export const stepFunctionRequirementsMap: Record<StepFunctionName, StepFunctionR
 // Map the lambda functions to their step function names
 export const stepFunctionLambdaMap: Record<StepFunctionName, LambdaNameList[]> = {
   handleNewJobRequestWithTaskToken: ['launchDecompressionJob'],
-  runDecompressionJob: [
-    'getFastqObject',
-    'updateFastqDecompressionServiceStatus',
-    'getFastqSetIdListFromFastqIdList',
-  ],
+  runDecompressionJob: ['getFastqObject', 'updateFastqDecompressionServiceStatus'],
   heartbeatMonitor: ['listRunningJobs', 'updateFastqDecompressionServiceStatus'],
   handleDecompressionStateChangeEvent: [],
 };

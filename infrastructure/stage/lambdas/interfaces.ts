@@ -10,7 +10,6 @@ export type LambdaNameList =
   | 'listRunningJobs'
   // Run Decompression Job lambdas
   | 'updateFastqDecompressionServiceStatus'
-  | 'getFastqSetIdListFromFastqIdList'
   | 'getFastqObject';
 
 export const lambdaNameList: LambdaNameList[] = [
@@ -20,7 +19,6 @@ export const lambdaNameList: LambdaNameList[] = [
   'listRunningJobs',
   // Run Decompression Job lambdas
   'updateFastqDecompressionServiceStatus',
-  'getFastqSetIdListFromFastqIdList',
   'getFastqObject',
 ];
 
@@ -39,9 +37,6 @@ export const lambdaRequirementsMap: Record<LambdaNameList, LambdaRequirementsPro
     needsOrcabusApiTools: true,
   },
   updateFastqDecompressionServiceStatus: {
-    needsOrcabusApiTools: true,
-  },
-  getFastqSetIdListFromFastqIdList: {
     needsOrcabusApiTools: true,
   },
 };
