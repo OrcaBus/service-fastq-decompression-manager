@@ -4,10 +4,11 @@ import { createJobsBucket } from './s3';
 import { StatefulApplicationStackConfig } from './interfaces';
 import { buildDynamoDbTables } from './dynamodb';
 import { buildSchemas } from './event-schemas';
+import { GitStack } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
 
 export type StatefulApplicationStackProps = StatefulApplicationStackConfig & cdk.StackProps;
 
-export class StatefulApplicationStack extends cdk.Stack {
+export class StatefulApplicationStack extends GitStack {
   constructor(scope: Construct, id: string, props: StatefulApplicationStackProps) {
     super(scope, id, props);
 
