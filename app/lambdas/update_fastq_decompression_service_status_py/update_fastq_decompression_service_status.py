@@ -39,6 +39,7 @@ def handler(event, context):
     :return:
     """
 
+    # Get inputs
     job_id = event.get("jobId", None)
     status = event.get("status", None)
     steps_execution_arn = event.get("stepsExecutionArn", None)

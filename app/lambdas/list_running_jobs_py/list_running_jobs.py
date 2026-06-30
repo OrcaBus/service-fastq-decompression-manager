@@ -3,8 +3,10 @@
 """
 List all running jobs on the decompression system
 """
+# Standard imports
 from typing import List
 
+# Orcabus imports
 from orcabus_api_tools.fastq_decompression import get_decompression_job_list
 from orcabus_api_tools.fastq_decompression.models import Job
 
