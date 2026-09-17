@@ -200,6 +200,10 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 			end
 		  '
 	  )"
+	  if [[ "${SAMPLING_PROPORTION}" == "0" ]]; then
+	    # If max reads is < 1% of total reads we will get a rounding error
+	    SAMPLING_PROPORTION="${MAX_READS}"
+	  fi
 	  echo_stderr "Sampling Proportion is ${SAMPLING_PROPORTION}"
 	fi
   fi
