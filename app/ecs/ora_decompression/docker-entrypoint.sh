@@ -188,14 +188,14 @@ if [[ "${JOB_TYPE}" == "ORA_DECOMPRESSION" ]]; then
 		  --argjson maxReads "${MAX_READS}" \
 		  --argjson totalReadCount "${TOTAL_READ_COUNT}" \
 		  '
-			if ($maxReads > $totalReadCount or $maxReads < 1 ) then
+			if ($maxReads >= $totalReadCount or $maxReads < 1 ) then
 			  1.0
 			else
 			  # Calculate the sampling proportion as a percentage
 			  # This is the maximum reads divided by the total read count
 			  # rounded to 2 decimal places
 			  (
-				 (( 100 * $maxReads) / $totalReadCount ) | round
+				 ( (( 100 * $maxReads) / $totalReadCount ) | ceil ) | round
 			  ) / 100
 			end
 		  '
