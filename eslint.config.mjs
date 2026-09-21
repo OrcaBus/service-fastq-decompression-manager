@@ -11,6 +11,7 @@ export default defineConfig([
   globalIgnores([
     'cdk.out/',
     'node_modules/*',
+    '.venv/', // Local Python virtualenv, not project source
     'app/*', // App folder should have its own eslint config
   ]),
 ]);
